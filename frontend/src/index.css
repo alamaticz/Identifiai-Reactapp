@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 220 14% 96%;
+  --foreground: 222 47% 11%;
+}
+
+html {
+  font-size: 85%;
+  /* Simulating ~80-85% zoom level */
+}
+
+body {
+  background-color: #F7F9F8;
+  color: #1E1E1E;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-lg border border-gray-200 shadow-sm p-6;
+  }
+}
