@@ -13,6 +13,8 @@ interface Message {
     content: string;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const ChatAgent: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([
         { role: 'assistant', content: 'Welcome to Pega Log Analysis Assistant! I can help you analyze errors, find specific logs, or summarize issues. What would you like to know?' }
@@ -39,7 +41,7 @@ const ChatAgent: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const response = await axios.post('http://localhost:8000/api/chat', { message: userMessage });
+            const response = await axios.post(`${API_URL}/api/chat`, { message: userMessage });
             setMessages(prev => [...prev, { role: 'assistant', content: response.data.response }]);
         } catch (error: any) {
             console.error("Chat connection error:", {

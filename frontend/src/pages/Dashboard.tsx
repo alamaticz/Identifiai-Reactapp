@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import InspectionModal from '../components/InspectionModal';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
-import { FileText, Clock, Activity, AlertTriangle, CheckCircle, Search } from 'lucide-react';
+import { FileText, Clock, Activity } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -11,6 +11,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 const COLORS = ['#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c', '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5'];
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const Dashboard: React.FC = () => {
     const [metrics, setMetrics] = useState<any>(null);
@@ -33,14 +35,14 @@ const Dashboard: React.FC = () => {
     const fetchData = async () => {
         try {
             const [mRes, levelRes, statusRes, tableRes, topRes, trendRes, optionsRes, typeRes] = await Promise.all([
-                axios.get('http://localhost:8000/api/metrics'),
-                axios.get('http://localhost:8000/api/analytics/log-levels'),
-                axios.get('http://localhost:8000/api/analytics/diagnosis-status'),
-                axios.get('http://localhost:8000/api/logs/details'),
-                axios.get('http://localhost:8000/api/analytics/top-errors'),
-                axios.get('http://localhost:8000/api/analytics/trends'),
-                axios.get('http://localhost:8000/api/status-options'),
-                axios.get('http://localhost:8000/api/type-options')
+                axios.get(`${API_URL}/api/metrics`),
+                axios.get(`${API_URL}/api/analytics/log-levels`),
+                axios.get(`${API_URL}/api/analytics/diagnosis-status`),
+                axios.get(`${API_URL}/api/logs/details`),
+                axios.get(`${API_URL}/api/analytics/top-errors`),
+                axios.get(`${API_URL}/api/analytics/trends`),
+                axios.get(`${API_URL}/api/status-options`),
+                axios.get(`${API_URL}/api/type-options`)
             ]);
 
             setMetrics(mRes.data);
