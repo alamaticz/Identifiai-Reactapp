@@ -43,12 +43,21 @@ const ChatAgent: React.FC = () => {
             const response = await axios.post(API_ENDPOINTS.CHAT, { message: userMessage });
             setMessages(prev => [...prev, { role: 'assistant', content: response.data.response }]);
         } catch (error: any) {
-            console.error("Chat connection error:", {
+            console.error("Chat connection error details:", {
                 message: error.message,
-                code: error.code,
-                response: error.response?.data
+                status: error.response?.status,
+                data: error.response?.data,
+                config: error.config
             });
-            setMessages(prev => [...prev, { role: 'assistant', content: "I'm sorry, I encountered an error connecting to the analysis engine. Please try again later." }]);
+
+            let errorMessage = "I'm sorry, I encountered an error connecting to the analysis engine.";
+            if (error.response?.data?.detail) {
+                errorMessage += ` Details: ${error.response.data.detail}`;
+            } else if (error.message) {
+                errorMessage += ` (${error.message})`;
+            }
+
+            setMessages(prev => [...prev, { role: 'assistant', content: errorMessage + " Please try again later." }]);
         } finally {
             setIsLoading(false);
         }
