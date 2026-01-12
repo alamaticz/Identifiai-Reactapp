@@ -29,6 +29,14 @@ try:
 
     app = FastAPI()
 
+    @app.get("/")
+    async def root():
+        return {"status": "success", "message": "IdentifAI Backend API is running"}
+
+    @app.get("/ai")
+    async def ai_root():
+        return {"status": "success", "message": "AI Analysis Agent is active"}
+
     # Global agent executor store
     class ChatRequest(BaseModel):
         message: str
