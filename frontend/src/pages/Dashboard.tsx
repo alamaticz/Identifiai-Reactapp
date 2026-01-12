@@ -195,24 +195,6 @@ const Dashboard: React.FC = () => {
                     </div>
                     <span>Pega Log Analysis Dashboard</span>
                 </h2>
-                <div className="flex space-x-2">
-                    <button
-                        onClick={runAnalysis}
-                        disabled={isAnalyzing}
-                        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-base font-bold rounded-xl shadow-lg transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group active:scale-95"
-                    >
-                        {isAnalyzing ? (
-                            <>
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                <span>Running Diagnosis...</span>
-                            </>
-                        ) : (
-                            <>
-                                <span className="group-hover:animate-pulse">✨ Analyse Top 5 Errors</span>
-                            </>
-                        )}
-                    </button>
-                </div>
             </div>
 
             {/* Metrics Cards */}
@@ -338,15 +320,36 @@ const Dashboard: React.FC = () => {
                                 <span>Detailed Group Analysis</span>
                             </h3>
                         </div>
-                        <div className="text-sm text-gray-400 font-bold uppercase tracking-widest">
-                            Showing {filteredTableData.length} analysis groups
+
+                        <div className="flex items-center gap-6">
+                            <button
+                                onClick={runAnalysis}
+                                disabled={isAnalyzing}
+                                className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg transition-all flex items-center gap-3 group active:scale-95 disabled:opacity-50"
+                            >
+                                {isAnalyzing ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <span className="uppercase tracking-widest text-[11px]">Analyzing...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-lg group-hover:animate-bounce">✨</span>
+                                        <span className="font-bold text-white transition-colors">Analyse Top 5 Errors</span>
+                                    </>
+                                )}
+                            </button>
+
+                            <div className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em] hidden sm:block">
+                                {filteredTableData.length} GROUPS
+                            </div>
                         </div>
                     </div>
                     <div className="overflow-x-auto max-h-[600px] custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 shadow-sm border-b border-gray-100">
                                 <tr>
-                                    {['Inspect', 'Last Seen', 'Full Signature', 'Type', 'Count', 'Status', 'Rule Name', 'Log Message', 'Logger', 'Report', 'Exception Info'].map((header, idx) => (
+                                    {['Inspect', 'Last Seen', 'Full Signature', 'Type', 'Count', 'Status', 'Rule Name', 'Log Message', 'Logger', 'Exception Info', 'Report'].map((header, idx) => (
                                         <th key={header} className="px-8 py-5 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] group cursor-pointer relative">
                                             <div className="flex items-center justify-between">
                                                 <span>{header}</span>
@@ -431,12 +434,17 @@ const Dashboard: React.FC = () => {
                                 {filteredTableData.map((row, idx) => (
                                     <tr key={idx} className="group hover:bg-gray-50/50 transition-colors border-l-4 border-l-transparent hover:border-l-[#ee4a4a]">
                                         <td className="px-8 py-5 text-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={inspectingId === row['doc_id']}
-                                                onChange={() => setInspectingId(row['doc_id'])}
-                                                className="w-5 h-5 rounded-lg border-gray-300 text-[#ee4a4a] focus:ring-[#ee4a4a] cursor-pointer shadow-sm transition-all hover:scale-110 active:scale-95"
-                                            />
+                                            <button
+                                                onClick={() => setInspectingId(row['doc_id'])}
+                                                className={cn(
+                                                    "text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all",
+                                                    inspectingId === row['doc_id']
+                                                        ? "bg-[#ee4a4a] text-white shadow-lg shadow-red-200 scale-105"
+                                                        : "text-[#ee4a4a] hover:bg-red-50"
+                                                )}
+                                            >
+                                                Inspect
+                                            </button>
                                         </td>
                                         <td className="px-8 py-5">
                                             <div className="flex flex-col">
@@ -494,6 +502,15 @@ const Dashboard: React.FC = () => {
                                                 </div>
                                             </div>
                                         </td>
+                                        {/* Rule Name */}
+                                        <td className="px-8 py-5">
+                                            <div className="max-w-[150px]">
+                                                <p className="text-sm font-semibold text-gray-800 truncate" title={row['display_rule'] !== 'N/A' ? row['display_rule'] : row['logger_name']}>
+                                                    {row['display_rule'] !== 'N/A' ? row['display_rule'] : row['logger_name']}
+                                                </p>
+                                            </div>
+                                        </td>
+                                        {/* Log Message */}
                                         <td className="px-8 py-5">
                                             <div className="max-w-[200px]">
                                                 <p className="text-sm font-medium text-gray-500 line-clamp-2" title={row['message_summary']}>
@@ -501,6 +518,7 @@ const Dashboard: React.FC = () => {
                                                 </p>
                                             </div>
                                         </td>
+                                        {/* Logger */}
                                         <td className="px-8 py-5">
                                             <div className="max-w-[150px]">
                                                 <p className="text-sm font-medium text-gray-500 truncate" title={row['logger_name']}>
@@ -508,17 +526,19 @@ const Dashboard: React.FC = () => {
                                                 </p>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5">
-                                            <div className="max-w-[200px]">
-                                                <p className="text-sm font-medium text-gray-500 line-clamp-2" title={row['diagnosis.report']}>
-                                                    {row['diagnosis.report']}
-                                                </p>
-                                            </div>
-                                        </td>
+                                        {/* Exception Info */}
                                         <td className="px-8 py-5">
                                             <div className="max-w-[300px]">
                                                 <p className="text-sm font-medium text-gray-500 line-clamp-2" title={row['exception_summary']}>
                                                     {row['exception_summary']}
+                                                </p>
+                                            </div>
+                                        </td>
+                                        {/* Report */}
+                                        <td className="px-8 py-5">
+                                            <div className="max-w-[200px]">
+                                                <p className="text-sm font-medium text-gray-500 line-clamp-2" title={row['diagnosis.report']}>
+                                                    {row['diagnosis.report']}
                                                 </p>
                                             </div>
                                         </td>
