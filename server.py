@@ -1,4 +1,8 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+import sys
+import traceback
+
+try:
+    from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -439,7 +443,11 @@ async def apply_grouping():
         print(f"Grouping workflow failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+except Exception as e:
+    print("CRITICAL: Failed to import server.py")
+    traceback.print_exc(file=sys.stdout)
+    sys.exit(1)
 
