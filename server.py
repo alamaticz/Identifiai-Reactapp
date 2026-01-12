@@ -26,8 +26,27 @@ try:
     from langchain_community.chat_message_histories import ChatMessageHistory
 
     load_dotenv(override=False)
+    client = db_utils.get_opensearch_client()
 
     app = FastAPI()
+
+    # Enable CORS for frontend development and production
+    # Added allow_origin_regex for better Netlify support
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:5173",
+            "https://identifiai.netlify.app",
+            "https://identifai.netlify.app",
+            "https://identifiai-reactapp.netlify.app",
+        ],
+        allow_origin_regex=r"https://.*\.netlify\.app",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/")
     async def root():
@@ -95,23 +114,7 @@ try:
              print(f"Chat error: {e}")
              raise HTTPException(status_code=500, detail=str(e))
 
-    # Enable CORS for frontend development and production
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:5173",
-            "https://*.netlify.app",  # Netlify preview deployments
-            "https://identifai.netlify.app",  # Production Netlify URL (Old)
-            "https://identifiai-reactapp.netlify.app", # Production Netlify URL (New)
-        ],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    client = db_utils.get_opensearch_client()
+    # Removed duplicate middleware and client initialization logic
 
     @app.get("/api/status-options")
     async def get_status_options():
