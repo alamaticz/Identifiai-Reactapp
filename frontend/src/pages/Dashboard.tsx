@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 import InspectionModal from '../components/InspectionModal';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 import { FileText, Clock, Activity } from 'lucide-react';
@@ -11,8 +12,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 const COLORS = ['#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c', '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5'];
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const Dashboard: React.FC = () => {
     const [metrics, setMetrics] = useState<any>(null);
@@ -35,14 +34,14 @@ const Dashboard: React.FC = () => {
     const fetchData = async () => {
         try {
             const [mRes, levelRes, statusRes, tableRes, topRes, trendRes, optionsRes, typeRes] = await Promise.all([
-                axios.get(`${API_URL}/api/metrics`),
-                axios.get(`${API_URL}/api/analytics/log-levels`),
-                axios.get(`${API_URL}/api/analytics/diagnosis-status`),
-                axios.get(`${API_URL}/api/logs/details`),
-                axios.get(`${API_URL}/api/analytics/top-errors`),
-                axios.get(`${API_URL}/api/analytics/trends`),
-                axios.get(`${API_URL}/api/status-options`),
-                axios.get(`${API_URL}/api/type-options`)
+                axios.get(API_ENDPOINTS.METRICS),
+                axios.get(API_ENDPOINTS.LOG_LEVELS),
+                axios.get(API_ENDPOINTS.DIAGNOSIS_STATUS),
+                axios.get(API_ENDPOINTS.LOG_DETAILS),
+                axios.get(API_ENDPOINTS.TOP_ERRORS),
+                axios.get(API_ENDPOINTS.TRENDS),
+                axios.get(API_ENDPOINTS.STATUS_OPTIONS),
+                axios.get(API_ENDPOINTS.TYPE_OPTIONS)
             ]);
 
             setMetrics(mRes.data);
@@ -119,7 +118,7 @@ const Dashboard: React.FC = () => {
             formData.append('doc_id', docId);
             formData.append('status', newStatus);
 
-            await axios.post('http://localhost:8000/api/logs/update-status', formData);
+            await axios.post(API_ENDPOINTS.UPDATE_STATUS, formData);
             await fetchData();
         } catch (err) {
             console.error("Failed to update status", err);
@@ -164,7 +163,7 @@ const Dashboard: React.FC = () => {
     const runAnalysis = async () => {
         setIsAnalyzing(true);
         try {
-            const response = await axios.post('http://localhost:8000/api/analysis/trigger');
+            const response = await axios.post(API_ENDPOINTS.TRIGGER_ANALYSIS);
             alert(response.data.message);
             fetchData(); // Refresh data to see new reports
         } catch (error: any) {

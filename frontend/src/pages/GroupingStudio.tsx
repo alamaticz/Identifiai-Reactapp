@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 import { Loader2, Search, Wand2, Save, Play, Check, X, AlertCircle } from "lucide-react";
 
 // --- Types ---
@@ -154,7 +155,7 @@ export default function GroupingStudio() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('http://localhost:8000/api/logs/details');
+            const response = await axios.get(API_ENDPOINTS.LOG_DETAILS);
             setData(response.data);
             setFilteredData(response.data);
         } catch (error) {
@@ -198,7 +199,7 @@ export default function GroupingStudio() {
                 return item.display_rule; // fallback
             });
 
-            const response = await axios.post('http://localhost:8000/api/grouping/generate-pattern', {
+            const response = await axios.post(API_ENDPOINTS.GENERATE_PATTERN, {
                 examples,
                 search_query: searchQuery
             });
@@ -229,7 +230,7 @@ export default function GroupingStudio() {
 
         setIsSaving(true);
         try {
-            await axios.post('http://localhost:8000/api/grouping/save-rule', {
+            await axios.post(API_ENDPOINTS.SAVE_RULE, {
                 name: ruleName,
                 pattern: rulePattern,
                 group_type: ruleType
@@ -256,7 +257,7 @@ export default function GroupingStudio() {
 
         setIsApplying(true);
         try {
-            const response = await axios.post('http://localhost:8000/api/grouping/apply');
+            const response = await axios.post(API_ENDPOINTS.APPLY_GROUPING);
             showNotification("Grouping Applied", `Successfully re-grouped logs. Restored ${response.data.restored_count} manual status labels.`);
             // Refresh table
             fetchData();
@@ -369,7 +370,7 @@ export default function GroupingStudio() {
                                                             const formData = new FormData();
                                                             formData.append('doc_id', item.doc_id);
                                                             formData.append('status', newStatus);
-                                                            await axios.post('http://localhost:8000/api/logs/update-status', formData);
+                                                            await axios.post(API_ENDPOINTS.UPDATE_STATUS, formData);
                                                             showNotification("Status Updated", `Updated status to ${newStatus}`);
                                                         } catch (error) {
                                                             showNotification("Update Failed", "Failed to persist status update", "error");

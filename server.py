@@ -4,9 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import pandas as pd
 from dotenv import load_dotenv
-import dashboard as db_utils
+import db_utils
 from ingest_pega_logs import ingest_file
-import tempfile
 import tempfile
 import json
 import asyncio
@@ -84,10 +83,16 @@ async def chat_endpoint(request: ChatRequest):
          print(f"Chat error: {e}")
          raise HTTPException(status_code=500, detail=str(e))
 
-# Enable CORS for frontend development
+# Enable CORS for frontend development and production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+        "https://*.netlify.app",  # Netlify preview deployments
+        "https://identifai.netlify.app",  # Production Netlify URL
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -359,7 +364,7 @@ async def generate_pattern(payload: PatternGenerationRequest):
             
             **Rules**:
             1. If modifying an existing regex, ensure it still matches the original intent but is broad enough for the new logs.
-            2. Use `.*` or `[\d]+` for variable parts.
+            2. Use `.*` or `[\\d]+` for variable parts.
             3. Keep static parts exact.
             """
         )

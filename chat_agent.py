@@ -4,22 +4,23 @@ from dotenv import load_dotenv
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_tool_calling_agent, AgentExecutor
 
-# Load env variables if not already loaded
+# Load env variables if not already loaded (dashboard likely loaded them, but good for safety)
 load_dotenv()
 
 async def initialize_agent_executor(memory=None):
     """
-    Initializes and returns an Agent connected to the OpenSearch MCP server using LangGraph.
+    Initializes and returns an AgentExecutor connected to the OpenSearch MCP server.
     """
     mcp_url = os.getenv("MCP_SERVER_URL", "http://localhost:9900/sse")
     print(f"[DEBUG] MCP_SERVER_URL: {mcp_url}")
     
+    # Connect to OpenSearch MCP
     mcp_server_config = {
         "opensearch": { 
             "url": mcp_url,
-            "transport": "sse" if "/sse" in mcp_url else "stream",
+            "transport": "sse",
             "headers": {
                 "Content-Type": "application/json",
                 "Accept-Encoding": "identity",
@@ -28,40 +29,36 @@ async def initialize_agent_executor(memory=None):
     }
     
     client = MultiServerMCPClient(mcp_server_config)
+    
+    # Fetch tools asynchronously
+    # Note: verify_tools=False might be needed if connection is flaky, but we verified it works.
     tools = await client.get_tools() 
     
     if not tools:
-        print("[WARNING] No tools found from MCP server. Agent will have limited capabilities.")
+        raise ValueError("No tools found from MCP server.")
 
     model = ChatOpenAI(model="gpt-4o", streaming=True)
     
-    system_prompt = (
-        "You are a helpful Log Analysis Assistant. You have access to OpenSearch logs. "
-        "IMPORTANT: Always check the index mapping using get_mapping or similar tools before performing any searches. "
-        "Ensure you build syntactically correct OpenSearch DSL queries. "
-        "When searching for errors or logs, ALWAYS search across 'log.message', 'exception_message', "
-        "and 'log.exception.exception_message' fields."
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful Log Analysis Assistant. You have access to OpenSearch logs. You usually don't need to mention Tool names. IMPORTANT: Always check the index mapping using get_mapping or similar tools before performing any searches to ensure you use the correct fields. Ensure you build syntactically correct OpenSearch DSL queries relative to the mapping found. When searching for errors or logs, ALWAYS search across 'log.message', 'exception_message', and 'log.exception.exception_message' fields. Do not rely on a single field."),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}"),
+        MessagesPlaceholder(variable_name="agent_scratchpad"),
+    ])
+
+    agent = create_tool_calling_agent(
+        llm=model,
+        tools=tools,
+        prompt=prompt
     )
 
-    agent = create_react_agent(
-        model=model,
+    agent_executor = AgentExecutor(
+        agent=agent,
         tools=tools,
-        prompt=system_prompt,
+        verbose=True,
+        memory=memory,
+        handle_parsing_errors=True,
+        return_intermediate_steps=True
     )
     
-    # We return a wrapper that has an 'ainvoke' method matching the expected API by server.py
-    class AgentWrapper:
-        def __init__(self, agent):
-            self.agent = agent
-        
-        async def ainvoke(self, input_data):
-            messages = []
-            if "chat_history" in input_data:
-                messages.extend(input_data["chat_history"])
-            messages.append(("human", input_data["input"]))
-            
-            result = await self.agent.ainvoke({"messages": messages})
-            last_msg = result["messages"][-1]
-            return {"output": last_msg.content}
-
-    return AgentWrapper(agent)
+    return agent_executor

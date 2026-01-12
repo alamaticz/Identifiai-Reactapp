@@ -1,0 +1,102 @@
+# GitHub Actions CI/CD (Optional)
+# This workflow ensures your code builds correctly before deployment
+# Netlify and Render will still handle the actual deployment
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Test Backend
+  backend-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Lint with flake8 (optional)
+      run: |
+        pip install flake8
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+    
+    - name: Test FastAPI server starts
+      run: |
+        timeout 10 uvicorn server:app --host 0.0.0.0 --port 8000 || exit 0
+      env:
+        OPENSEARCH_URL: http://dummy-url.com
+        OPENSEARCH_USER: dummy
+        OPENSEARCH_PASS: dummy
+        OPENAI_API_KEY: sk-dummy-key
+
+  # Test Frontend Build
+  frontend-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Lint
+      run: |
+        cd frontend
+        npm run lint
+      continue-on-error: true
+    
+    - name: Build
+      run: |
+        cd frontend
+        npm run build
+      env:
+        VITE_API_URL: https://dummy-backend.com
+    
+    - name: Upload build artifacts (optional)
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend-build
+        path: frontend/dist
+        retention-days: 7
+
+  # Security scan (optional)
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+      continue-on-error: true

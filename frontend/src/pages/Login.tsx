@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 
 interface LoginProps {
     onLoginSuccess: () => void;
@@ -21,7 +22,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         formData.append('password', password);
 
         try {
-            const response = await axios.post('http://localhost:8000/api/login', formData);
+            const response = await axios.post(API_ENDPOINTS.LOGIN, formData);
             if (response.data.status === 'success') {
                 localStorage.setItem('isAuthenticated', 'true');
                 onLoginSuccess();

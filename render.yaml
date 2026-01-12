@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: identifai-backend
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    # Environment variables will be loaded from .env file during deployment
+    # You can also set them manually in Render dashboard
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      # These will be set from your .env file or Render dashboard
+      - key: OPENSEARCH_URL
+        sync: false
+      - key: OPENSEARCH_USER
+        sync: false
+      - key: OPENSEARCH_PASS
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

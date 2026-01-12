@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 import { Activity, Info, AlertTriangle, FileText, CheckCircle, X, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '../pages/Dashboard'; // Basic utility, acceptable reuse check
 
@@ -17,7 +18,7 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
     useEffect(() => {
         const fetchDetails = async () => {
             try {
-                const response = await axios.get(`http://localhost:8000/api/logs/group/${docId}`);
+                const response = await axios.get(API_ENDPOINTS.LOG_GROUP(docId));
                 setData(response.data);
             } catch (err) {
                 console.error("Failed to fetch log details", err);

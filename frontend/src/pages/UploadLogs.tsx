@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, X, FileText, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -55,7 +56,7 @@ const UploadLogs: React.FC = () => {
             formData.append('file', f.file);
 
             try {
-                const response = await axios.post('http://localhost:8000/api/logs/upload', formData, {
+                const response = await axios.post(API_ENDPOINTS.UPLOAD_LOGS, formData, {
                     onUploadProgress: (progressEvent) => {
                         const progress = Math.round((progressEvent.loaded * 90) / (progressEvent.total || 1));
                         setUploadingFiles(prev => prev.map(item =>

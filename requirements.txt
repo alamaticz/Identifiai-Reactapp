@@ -1,3 +1,6 @@
+fastapi
+uvicorn[standard]
+python-multipart
 streamlit>=1.30.0
 pandas>=2.0.0
 plotly>=5.18.0
@@ -10,4 +13,5 @@ langchain-community>=0.3.15
 langchain-mcp-adapters==0.1.11
 nest_asyncio
 tqdm
+pydantic
 mcp-server-opensearch

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, User, Bot, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -12,8 +13,6 @@ interface Message {
     role: 'user' | 'assistant';
     content: string;
 }
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const ChatAgent: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([
@@ -41,7 +40,7 @@ const ChatAgent: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const response = await axios.post(`${API_URL}/api/chat`, { message: userMessage });
+            const response = await axios.post(API_ENDPOINTS.CHAT, { message: userMessage });
             setMessages(prev => [...prev, { role: 'assistant', content: response.data.response }]);
         } catch (error: any) {
             console.error("Chat connection error:", {
