@@ -103,7 +103,8 @@ try:
             "http://localhost:3001",
             "http://localhost:5173",
             "https://*.netlify.app",  # Netlify preview deployments
-            "https://identifai.netlify.app",  # Production Netlify URL
+            "https://identifai.netlify.app",  # Production Netlify URL (Old)
+            "https://identifiai-reactapp.netlify.app", # Production Netlify URL (New)
         ],
         allow_credentials=True,
         allow_methods=["*"],
