@@ -78,7 +78,7 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                             <Info className="w-6 h-6" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black text-[#0f172a]">Detailed Inspection</h2>
+                            <h2 className="text-xl font-black text-[#0f172a]">Inspection: {displayRule}</h2>
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">ID: {docId}</p>
                         </div>
                     </div>
@@ -100,173 +100,179 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                 </div>
 
                 {/* Modal Content - Scrollable */}
-                <div className="overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                <div className="overflow-y-auto custom-scrollbar flex-1">
+                    <div className="p-8 space-y-8">
+                        {/* AI Diagnosis Report Section */}
+                        {(() => {
+                            const report = group['diagnosis.report'] || group.diagnosis?.report || "No AI diagnosis report available.";
 
-                    {/* Unified Analysis Card */}
-                    {(() => {
-                        const status = group['diagnosis.status'] || group.diagnosis?.status || 'PENDING';
-                        const report = group['diagnosis.report'] || group.diagnosis?.report || "No AI diagnosis report available.";
+                            // Try to parse the report into Summary and Fix sections
+                            const sections = report.split(/Fix:|Resolution Step:|Steps to Resolution:/i);
+                            const summary = sections[0].trim();
+                            const fix = sections.length > 1 ? sections[1].trim() : null;
 
-                        return (
-                            <div className="bg-white p-8 rounded-2xl border border-gray-200/60 shadow-sm relative overflow-hidden">
-                                {/* Decorative Background */}
-                                <div className="absolute -right-6 -top-6 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl"></div>
-                                <div className="absolute -left-6 -bottom-6 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
+                            return (
+                                <div className="bg-white p-8 rounded-2xl border border-gray-200/60 shadow-sm relative overflow-hidden">
+                                    <div className="absolute -right-6 -top-6 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl"></div>
 
-                                <div className="relative z-10 space-y-8">
-                                    {/* Primary Metadata */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <div>
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Row Rule / Source</p>
-                                                <p className="text-xl font-bold text-[#0f172a] leading-tight">{displayRule || group.display_rule || 'N/A'}</p>
+                                    <div className="relative z-10 space-y-6">
+                                        <div className="flex items-center gap-2">
+                                            <div className="bg-blue-50 p-1.5 rounded-lg">
+                                                <Activity className="w-4 h-4 text-blue-600" />
                                             </div>
-                                            <div className="flex gap-10">
-                                                <div>
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Group Type</p>
-                                                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-[11px] font-black uppercase tracking-wide">
-                                                        {group.group_type || group['group_type'] || 'LOG'}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Logs in Group</p>
-                                                    <span className="text-xl font-black text-[#0f172a]">{group.count || group['count'] || '0'}</span>
-                                                </div>
-                                            </div>
+                                            <h3 className="text-sm font-black text-[#0f172a] uppercase tracking-wider">AI Diagnosis Report</h3>
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Full Signature</p>
-                                            <div className="bg-gray-50/80 p-4 rounded-xl border border-gray-100/80 shadow-inner">
-                                                <code className="text-[11px] text-gray-600 break-all font-mono leading-relaxed">
-                                                    {group.group_signature || group['group_signature'] || 'No signature available'}
-                                                </code>
+                                        <div className="prose prose-sm max-w-none text-gray-700">
+                                            <div className="mb-6">
+                                                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Analysis Summary</h4>
+                                                <p className="text-sm leading-relaxed font-medium bg-gray-50/50 p-4 rounded-xl border border-gray-100 italic">
+                                                    {summary}
+                                                </p>
                                             </div>
-                                        </div>
-                                    </div>
 
-                                    {/* Diagnosis Status Section */}
-                                    <div className="pt-6 border-t border-gray-100">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Diagnosis Status</p>
-                                                <div className="flex items-center space-x-4">
-                                                    <div className={cn(
-                                                        "w-12 h-12 rounded-full flex items-center justify-center shadow-md",
-                                                        status === 'RESOLVED' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'
-                                                    )}>
-                                                        {status === 'RESOLVED' ? <CheckCircle className="w-6 h-6" /> : <Activity className="w-6 h-6" />}
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-xl font-black text-[#0f172a] block">{status}</span>
-                                                        <p className="text-[10px] text-gray-400 font-bold uppercase">Current Resolution State</p>
+                                            {fix && (
+                                                <div>
+                                                    <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                        <CheckCircle className="w-3.5 h-3.5" />
+                                                        Recommended Action Plan
+                                                    </h4>
+                                                    <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50 space-y-4">
+                                                        {fix.split('\n').filter((line: string) => line.trim()).map((line: string, i: number) => (
+                                                            <div key={i} className="flex gap-4">
+                                                                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shadow-sm">
+                                                                    {i + 1}
+                                                                </span>
+                                                                <p className="text-sm font-bold text-[#0f172a] pt-0.5">{line.replace(/^\d+\.\s*/, '')}</p>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Logs Detail Section */}
+                        <div className="bg-white rounded-2xl border border-gray-200/60 shadow-lg overflow-hidden flex flex-col">
+                            {/* Tabs Header */}
+                            <div className="border-b border-gray-100 bg-gray-50/80 px-4 py-3 flex space-x-2 overflow-x-auto custom-scrollbar">
+                                {samples?.map((_: any, idx: number) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setActiveTab(idx)}
+                                        className={cn(
+                                            "px-6 py-2.5 rounded-xl text-xs font-black transition-all whitespace-nowrap border shadow-sm",
+                                            activeTab === idx
+                                                ? 'bg-white border-primary/20 text-primary scale-105 z-10'
+                                                : 'bg-gray-100/50 border-transparent text-gray-400 hover:bg-gray-200/50 hover:text-gray-600'
+                                        )}
+                                    >
+                                        LOG SAMPLE {idx + 1}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="p-8 bg-[#fcfcfc] min-h-[400px]">
+                                {samples && samples[activeTab] ? (
+                                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-400" key={activeTab}>
+                                        {/* Log Entry Context */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Timestamp</p>
+                                                <p className="text-sm font-bold text-[#0f172a]">{samples[activeTab].timestamp || 'N/A'}</p>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Level</p>
+                                                <span className={cn(
+                                                    "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider",
+                                                    samples[activeTab].level === 'ERROR' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                                                )}>
+                                                    {samples[activeTab].level || 'ERROR'}
+                                                </span>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Logger</p>
+                                                <p className="text-sm font-bold text-blue-600 truncate">{samples[activeTab].logger_name || 'N/A'}</p>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* AI Insight Section - Now under Status */}
-                                    <div className="pt-6 border-t border-gray-100">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">AI Insight Report</p>
-                                        </div>
-
-                                        <div className="bg-yellow-50/30 p-6 rounded-2xl border border-yellow-100/50 shadow-sm">
-                                            <p className="text-[13px] text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">
-                                                {report}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })()}
-                </div>
-
-                {/* Logs Viewer */}
-                <div className="bg-white rounded-2xl border border-gray-200/60 shadow-lg overflow-hidden flex flex-col min-h-[400px]">
-                    <div className="border-b border-gray-100 bg-gray-50/80 px-4 py-3 flex space-x-2 overflow-x-auto">
-                        {samples?.map((_: any, idx: number) => (
-                            <button
-                                key={idx}
-                                onClick={() => setActiveTab(idx)}
-                                className={cn(
-                                    "px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap border",
-                                    activeTab === idx
-                                        ? 'bg-white border-gray-200 text-primary shadow-sm'
-                                        : 'border-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                                )}
-                            >
-                                Log Sample {idx + 1}
-                            </button>
-                        ))}
-                        {(!samples || samples.length === 0) && (
-                            <div className="px-4 py-2 text-xs text-gray-400 italic font-medium">No sample logs available</div>
-                        )}
-                    </div>
-
-                    <div className="p-6 bg-[#fcfcfc] flex-1">
-                        {samples && samples[activeTab] ? (
-                            <div className="space-y-6 animate-in slide-in-from-right-2 duration-300" key={activeTab}>
-                                {/* Message */}
-                                <div>
-                                    <h4 className="text-xs font-black text-[#0f172a] mb-2 flex items-center gap-2 uppercase tracking-wide">
-                                        <FileText className="w-3.5 h-3.5 text-gray-400" />
-                                        Log Message
-                                    </h4>
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 text-xs font-mono text-gray-600 shadow-sm overflow-x-auto leading-relaxed">
-                                        {samples[activeTab].log?.message || samples[activeTab].message || "No message content"}
-                                    </div>
-                                </div>
-
-                                {/* Exception */}
-                                {samples[activeTab].exception_message && samples[activeTab].exception_message !== 'N/A' && (
-                                    <div>
-                                        <h4 className="text-xs font-black text-red-600 mb-2 flex items-center gap-2 uppercase tracking-wide">
-                                            <AlertTriangle className="w-3.5 h-3.5" />
-                                            Exception
-                                        </h4>
-                                        <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-xs font-mono text-red-700 shadow-sm leading-relaxed">
-                                            {samples[activeTab].exception_message}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Stack Trace */}
-                                {samples[activeTab].stack_trace && samples[activeTab].stack_trace.length > 0 && (
-                                    <div>
-                                        <h4 className="text-xs font-black text-[#0f172a] mb-2 uppercase tracking-wide">Stack Trace</h4>
-                                        <div className="bg-[#1e1e1e] p-4 rounded-xl border border-gray-800 text-[10px] font-mono text-gray-300 shadow-inner max-h-[300px] overflow-y-auto custom-scrollbar leading-loose">
-                                            {Array.isArray(samples[activeTab].stack_trace)
-                                                ? samples[activeTab].stack_trace.join('\n')
-                                                : JSON.stringify(samples[activeTab].stack_trace, null, 2)}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Raw JSON */}
-                                <div className="pt-2">
-                                    <details className="group">
-                                        <summary className="flex items-center cursor-pointer text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-primary transition-colors select-none">
-                                            <div className="w-4 h-4 bg-gray-100 rounded flex items-center justify-center mr-2 text-gray-500 group-open:bg-primary group-open:text-white transition-all">
-                                                <Maximize2 className="w-2.5 h-2.5" />
+                                        {/* Main Message Block */}
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <FileText className="w-4 h-4 text-gray-400" />
+                                                <h4 className="text-xs font-black text-[#0f172a] uppercase tracking-wider">Log Message Preview</h4>
                                             </div>
-                                            Show Full Raw JSON
-                                        </summary>
-                                        <div className="mt-4 bg-gray-100 p-4 rounded-xl text-[10px] font-mono text-gray-600 overflow-x-auto shadow-inner border border-gray-200">
-                                            <pre>{JSON.stringify(samples[activeTab], null, 2)}</pre>
+                                            <div className="bg-[#f1f5f9] p-6 rounded-2xl border border-gray-200 text-xs font-mono text-gray-700 shadow-inner overflow-x-auto leading-relaxed border-l-4 border-l-gray-400">
+                                                {samples[activeTab].log?.message || samples[activeTab].message || "No message content"}
+                                            </div>
                                         </div>
-                                    </details>
-                                </div>
+
+                                        {/* Exception - Red Style */}
+                                        {samples[activeTab].exception_message && samples[activeTab].exception_message !== 'N/A' && (
+                                            <div className="animate-in slide-in-from-left-4 duration-500">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                                                    <h4 className="text-xs font-black text-red-600 uppercase tracking-wider">Critical Exception Trace</h4>
+                                                </div>
+                                                <div className="bg-[#fff5f5] p-6 rounded-2xl border border-[#feb2b2] text-xs font-mono text-[#c53030] shadow-sm leading-relaxed border-l-4 border-l-red-600">
+                                                    <p className="font-black mb-2">{samples[activeTab].exception_type || 'Exception'}</p>
+                                                    {samples[activeTab].exception_message}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Stack Trace Expander */}
+                                        {samples[activeTab].stack_trace && samples[activeTab].stack_trace.length > 0 && (
+                                            <div className="pt-2">
+                                                <details className="group bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm transition-all">
+                                                    <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors select-none">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="bg-gray-800 p-1.5 rounded-lg">
+                                                                <Maximize2 className="w-3.5 h-3.5 text-white" />
+                                                            </div>
+                                                            <span className="text-[11px] font-black text-[#0f172a] uppercase tracking-widest">View Detailed Stack Trace</span>
+                                                        </div>
+                                                        <div className="text-gray-400 group-open:rotate-180 transition-transform">
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                                                        </div>
+                                                    </summary>
+                                                    <div className="p-6 bg-[#1e1e1e] border-t border-gray-800">
+                                                        <div className="text-[10px] font-mono text-gray-300 overflow-y-auto max-h-[400px] custom-scrollbar leading-loose whitespace-pre-wrap">
+                                                            {Array.isArray(samples[activeTab].stack_trace)
+                                                                ? samples[activeTab].stack_trace.join('\n')
+                                                                : String(samples[activeTab].stack_trace)}
+                                                        </div>
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        )}
+
+                                        {/* Raw Data Accordion */}
+                                        <div className="pt-4 mt-8 border-t border-gray-100">
+                                            <details className="group">
+                                                <summary className="flex items-center cursor-pointer text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-primary transition-colors select-none">
+                                                    <div className="w-5 h-5 bg-gray-100 rounded-lg flex items-center justify-center mr-3 text-gray-400 group-open:bg-primary/10 group-open:text-primary transition-all">
+                                                        <Maximize2 className="w-2.5 h-2.5" />
+                                                    </div>
+                                                    Full Payload Metadata
+                                                </summary>
+                                                <div className="mt-6 bg-gray-50 p-6 rounded-2xl text-[10px] font-mono text-gray-500 overflow-x-auto shadow-inner border border-gray-100">
+                                                    <pre className="custom-scrollbar">{JSON.stringify(samples[activeTab], null, 2)}</pre>
+                                                </div>
+                                            </details>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-300 py-32">
+                                        <Info className="w-16 h-16 mb-4 opacity-10" />
+                                        <p className="text-sm font-black uppercase tracking-widest">Select a log sample to begin deep dive</p>
+                                    </div>
+                                )}
                             </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-gray-300 py-20">
-                                <Info className="w-12 h-12 mb-3 opacity-20" />
-                                <p className="text-sm font-bold">Select a log sample to view details</p>
-                            </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </div>

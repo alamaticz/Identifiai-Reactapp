@@ -430,13 +430,13 @@ const Dashboard: React.FC = () => {
                             <tbody className="divide-y divide-gray-50">
                                 {filteredTableData.map((row, idx) => (
                                     <tr key={idx} className="group hover:bg-gray-50/50 transition-colors border-l-4 border-l-transparent hover:border-l-[#ee4a4a]">
-                                        <td className="px-8 py-5">
-                                            <span
-                                                onClick={() => setInspectingId(row['doc_id'])}
-                                                className="text-primary font-bold hover:underline cursor-pointer text-[10px] uppercase tracking-widest transition-colors hover:text-primary-dark"
-                                            >
-                                                Inspect
-                                            </span>
+                                        <td className="px-8 py-5 text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={inspectingId === row['doc_id']}
+                                                onChange={() => setInspectingId(row['doc_id'])}
+                                                className="w-5 h-5 rounded-lg border-gray-300 text-[#ee4a4a] focus:ring-[#ee4a4a] cursor-pointer shadow-sm transition-all hover:scale-110 active:scale-95"
+                                            />
                                         </td>
                                         <td className="px-8 py-5">
                                             <div className="flex flex-col">
