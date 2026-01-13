@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
             console.error("Error details:", err.message);
 
             // Show a more informative warning in development/debug
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
                 console.warn("Using mock data as fallback.");
             }
 
