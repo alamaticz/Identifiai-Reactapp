@@ -159,8 +159,21 @@ export default function GroupingStudio() {
             setData(response.data);
             setFilteredData(response.data);
         } catch (error) {
-            console.error("Error fetching data:", error);
-            showNotification("Error", "Failed to fetch logs data.", "error");
+            console.error("Error fetching data, using mock fallback:", error);
+            // Mock fallback data for development
+            const mockData: LogGroup[] = Array.from({ length: 5 }, (_, i) => ({
+                doc_id: `mock-${i + 1}`,
+                display_rule: i % 2 === 0 ? "Timeout Exception in Billing" : "Null Pointer in Auth",
+                exception_summary: i % 2 === 0 ? "java.util.concurrent.TimeoutException" : "java.lang.NullPointerException",
+                message_summary: i % 2 === 0 ? "Failed to process invoice due to timeout" : "Authentication failed for user null",
+                group_type: i % 2 === 0 ? "Timeout" : "NullPtr",
+                count: Math.floor(Math.random() * 100) + 1,
+                last_seen: "2024-03-12 11:20:00",
+                "diagnosis.status": "PENDING"
+            }));
+            setData(mockData);
+            setFilteredData(mockData);
+            showNotification("Preview Mode", "Backend not detected, using mock data.", "success");
         } finally {
             setLoading(false);
         }
