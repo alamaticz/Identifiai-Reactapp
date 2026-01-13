@@ -106,49 +106,137 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                         {(() => {
                             const report = group['diagnosis.report'] || group.diagnosis?.report || "No AI diagnosis report available.";
 
-                            // Try to parse the report into Summary and Fix sections
-                            const sections = report.split(/Fix:|Resolution Step:|Steps to Resolution:/i);
-                            const summary = sections[0].trim();
-                            const fix = sections.length > 1 ? sections[1].trim() : null;
+                            // Detailed Section Parsing for Analysis_Diagnosis.py headers
+                            const sectionsMapping = [
+                                { label: 'Executive Summary', pattern: /1\.\s*EXECUTIVE\s+SUMMARY/i },
+                                { label: 'Severity Assessment', pattern: /2\.\s*SEVERITY\s+ASSESSMENT/i },
+                                { label: 'Error Flow & Point of Failure', pattern: /3\.\s*ERROR\s+FLOW\s+&\s+POINT\s+OF\s+FAILURE/i },
+                                { label: 'Root Cause Analysis', pattern: /4\.\s*ROOT\s+CAUSE\s+ANALYSIS/i },
+                                { label: 'Impact Analysis', pattern: /5\.\s*IMPACT\s+ANALYSIS/i },
+                                { label: 'Step-by-Step Resolution', pattern: /6\.\s*STEP-BY-STEP\s+RESOLUTION/i }
+                            ];
+
+                            const parsedSections: { label: string, content: string }[] = [];
+
+                            // Find split points
+                            const headers = sectionsMapping.map(s => s.pattern);
+                            const parts = report.split(new RegExp(`(${headers.map(h => h.source).join('|')})`, 'i'));
+
+                            if (parts.length > 1) {
+                                for (let i = 1; i < parts.length; i += 2) {
+                                    const headerText = parts[i];
+                                    const contentText = parts[i + 1]?.trim();
+                                    const mapping = sectionsMapping.find(m => m.pattern.test(headerText));
+                                    if (mapping && contentText) {
+                                        parsedSections.push({ label: mapping.label, content: contentText });
+                                    }
+                                }
+                            }
+
+                            // Fallback to simple split if regex failed to find standard headers
+                            if (parsedSections.length === 0) {
+                                const sections = report.split(/Fix:|Resolution Step:|Steps to Resolution:/i);
+                                const summary = sections[0].trim();
+                                const fix = sections.length > 1 ? sections[1].trim() : null;
+                                return (
+                                    <div className="bg-white p-8 rounded-2xl border border-gray-200/60 shadow-sm relative overflow-hidden">
+                                        <div className="absolute -right-6 -top-6 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl"></div>
+                                        <div className="relative z-10 space-y-6">
+                                            <div className="flex items-center gap-2">
+                                                <div className="bg-blue-50 p-1.5 rounded-lg">
+                                                    <Activity className="w-4 h-4 text-blue-600" />
+                                                </div>
+                                                <h3 className="text-sm font-black text-[#0f172a] uppercase tracking-wider">AI Diagnosis Report</h3>
+                                            </div>
+                                            <div className="prose prose-sm max-w-none text-gray-700">
+                                                <div className="mb-6">
+                                                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Analysis Summary</h4>
+                                                    <p className="text-sm leading-relaxed font-medium bg-gray-50/50 p-4 rounded-xl border border-gray-100 italic">
+                                                        {summary}
+                                                    </p>
+                                                </div>
+                                                {fix && (
+                                                    <div>
+                                                        <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                            <CheckCircle className="w-3.5 h-3.5" />
+                                                            Recommended Action Plan
+                                                        </h4>
+                                                        <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50 space-y-4">
+                                                            {fix.split('\n').filter((line: string) => line.trim()).map((line: string, i: number) => (
+                                                                <div key={i} className="flex gap-4">
+                                                                    <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shadow-sm">
+                                                                        {i + 1}
+                                                                    </span>
+                                                                    <p className="text-sm font-bold text-[#0f172a] pt-0.5">{line.replace(/^\d+\.\s*/, '')}</p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
 
                             return (
                                 <div className="bg-white p-8 rounded-2xl border border-gray-200/60 shadow-sm relative overflow-hidden">
                                     <div className="absolute -right-6 -top-6 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl"></div>
 
-                                    <div className="relative z-10 space-y-6">
-                                        <div className="flex items-center gap-2">
-                                            <div className="bg-blue-50 p-1.5 rounded-lg">
-                                                <Activity className="w-4 h-4 text-blue-600" />
+                                    <div className="relative z-10 space-y-8">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="bg-blue-50 p-1.5 rounded-lg">
+                                                    <Activity className="w-4 h-4 text-blue-600" />
+                                                </div>
+                                                <h3 className="text-sm font-black text-[#0f172a] uppercase tracking-wider">AI Diagnosis Report</h3>
                                             </div>
-                                            <h3 className="text-sm font-black text-[#0f172a] uppercase tracking-wider">AI Diagnosis Report</h3>
+                                            {group.diagnosis?.timestamp && (
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                    Generated: {new Date(group.diagnosis.timestamp).toLocaleString()}
+                                                </span>
+                                            )}
                                         </div>
 
-                                        <div className="prose prose-sm max-w-none text-gray-700">
-                                            <div className="mb-6">
-                                                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Analysis Summary</h4>
-                                                <p className="text-sm leading-relaxed font-medium bg-gray-50/50 p-4 rounded-xl border border-gray-100 italic">
-                                                    {summary}
-                                                </p>
-                                            </div>
-
-                                            {fix && (
-                                                <div>
-                                                    <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                        <CheckCircle className="w-3.5 h-3.5" />
-                                                        Recommended Action Plan
-                                                    </h4>
-                                                    <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50 space-y-4">
-                                                        {fix.split('\n').filter((line: string) => line.trim()).map((line: string, i: number) => (
-                                                            <div key={i} className="flex gap-4">
-                                                                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shadow-sm">
-                                                                    {i + 1}
-                                                                </span>
-                                                                <p className="text-sm font-bold text-[#0f172a] pt-0.5">{line.replace(/^\d+\.\s*/, '')}</p>
-                                                            </div>
-                                                        ))}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {parsedSections.map((section, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className={cn(
+                                                        "space-y-3 p-6 rounded-2xl transition-all border",
+                                                        section.label === 'Step-by-Step Resolution'
+                                                            ? "md:col-span-2 bg-blue-50/30 border-blue-100 shadow-sm"
+                                                            : "bg-gray-50/30 border-gray-100 shadow-sm"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        {section.label === 'Step-by-Step Resolution' && <CheckCircle className="w-4 h-4 text-blue-600" />}
+                                                        <h4 className={cn(
+                                                            "text-[10px] font-black uppercase tracking-widest",
+                                                            section.label === 'Step-by-Step Resolution' ? "text-blue-600" : "text-gray-400"
+                                                        )}>
+                                                            {section.label}
+                                                        </h4>
                                                     </div>
+
+                                                    {section.label === 'Step-by-Step Resolution' ? (
+                                                        <div className="space-y-4">
+                                                            {section.content.split('\n').filter(l => l.trim()).map((line, i) => (
+                                                                <div key={i} className="flex gap-4">
+                                                                    <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shadow-sm">
+                                                                        {i + 1}
+                                                                    </span>
+                                                                    <p className="text-sm font-bold text-[#0f172a] pt-0.5">{line.replace(/^\d+\.\s*/, '')}</p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm font-semibold text-[#0f172a] leading-relaxed whitespace-pre-wrap">
+                                                            {section.content}
+                                                        </p>
+                                                    )}
                                                 </div>
-                                            )}
+                                            ))}
                                         </div>
                                     </div>
                                 </div>

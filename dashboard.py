@@ -647,8 +647,9 @@ if page == "Dashboard":
                 with st.spinner("Running AI Diagnosis... (This may take a minute)"):
                     try:
                         import subprocess
+                        import sys
                         # Run the diagnosis script as a separate process
-                        result = subprocess.run(["python", "Analysis_Diagnosis.py"], capture_output=True, text=True)
+                        result = subprocess.run([sys.executable, "Analysis_Diagnosis.py"], capture_output=True, text=True)
                         if result.returncode == 0:
                             st.success("Diagnosis Complete!")
                             with st.expander("View Analysis Logs"):
@@ -1128,10 +1129,14 @@ elif page == "Grouping Studio":
                                     "regex_pattern": "The UPDATED python regex (matching old + new) OR a completely NEW regex"
                                 }}
                                 
-                                **Rules**:
-                                1. If modifying an existing regex, ensure it still matches the original intent but is broad enough for the new logs.
-                                2. Use `.*` or `[\d]+` for variable parts.
-                                3. Keep static parts exact.
+                                **Critical Rules for Regex Generation**:
+                                1. **Do NOT use placeholders** like `[DATE]`, `[FILE_PATH]`, or `[ID]`. You must use valid regex for them (e.g., `.*?`, `\d+`, `\d{{4}}-\d{{2}}-\d{{2}}`).
+                                2. **Target Raw Logs**: The input examples you see might be "Normalized Signatures", but your regex must match the **RAW LOG LINES**.
+                                   - Raw logs often start with a timestamp (e.g., `2024-01-01 10:00:00 ERROR...`).
+                                   - **DO NOT** start your regex with `^` unless you explicitly include the timestamp pattern at the start.
+                                   - Ideally, **start with `.*`** or just the unanchored text to match broadly within the message.
+                                3. **Variable Parts**: Use `.*` or `[\d]+` for any dynamic values (IDs, Dates, Paths).
+                                4. **Keep Static Parts Exact**: Match the constant error text precisely to avoid false positives.
                                 """
                             )
                             chain = prompt | llm | StrOutputParser()
@@ -1250,17 +1255,32 @@ elif page == "Grouping Studio":
                              st.warning(f"Retry step failed: {e}")
                          time.sleep(0.5)
 
-                    # 3. Run Grouper (Optimized)
-                    status_text.text("Step 3/4: Running new grouping analysis (this may take a minute)...")
+                    # 3. Run Grouper (Optimized Parallel)
+                    status_text.text("Step 3/4: Running new grouping analysis (Parallel x4)...")
                     
                     try:
-                        from log_grouper import process_logs
+                        import subprocess
+                        import sys
                         
-                        # Capture stdout/stderr if needed, or just let it print to console logs
-                        # For blocking UI, we can just run it.
-                        process_logs(ignore_checkpoint=True, batch_size=2000)
+                        # Use subprocess to run the parallel version
+                        # equivalent to: python log_grouper.py --ignore-checkpoint --workers 4
+                        cmd = [
+                            sys.executable, 
+                            "log_grouper.py", 
+                            "--ignore-checkpoint", 
+                            "--workers", "4",
+                            "--batch-size", "1000"
+                        ]
                         
-                        progress_bar.progress(75)
+                        result = subprocess.run(cmd, capture_output=True, text=True)
+                        
+                        if result.returncode != 0:
+                             st.error(f"Grouping Script Failed:\n{result.stderr}")
+                             # If it failed, we shouldn't continue to restore potentially
+                             st.stop()
+                        else:
+                             # print(result.stdout) # Optional debug
+                             progress_bar.progress(75)
 
                         # 4. Restore
                         status_text.text("Step 4/4: Restoring manual status labels...")
@@ -1287,4 +1307,3 @@ elif page == "Grouping Studio":
                 pass 
                 # st.warning("No logs found matching query.")
                         
-

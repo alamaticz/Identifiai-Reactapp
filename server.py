@@ -9,7 +9,7 @@ try:
     import pandas as pd
     from dotenv import load_dotenv
     import db_utils
-    from ingest_pega_logs import ingest_file
+    from ingest_error_logs import ingest_file
     import tempfile
     import json
     import asyncio
