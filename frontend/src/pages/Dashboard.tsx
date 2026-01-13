@@ -198,21 +198,29 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Metrics Cards */}
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { label: 'Total Errors', value: metrics?.total_errors, color: 'bg-metrics-errors' },
-                    { label: 'Unique Issues', value: metrics?.unique_issues, color: 'bg-metrics-unique' },
+                    { label: 'Total Errors', value: metrics?.total_errors, color: 'bg-[#0f172a]' },
+                    { label: 'Unique Issues', value: metrics?.unique_issues, color: 'bg-[#0f172a]' },
                     { label: 'Top Rule Failure', value: metrics?.most_frequent, sub: true, color: 'bg-metrics-failure' },
                     { label: 'Recent Ingestion', value: metrics?.last_incident, color: 'bg-metrics-ingestion' },
                 ].map((m, i) => (
-                    <div key={i} className={`${m.color} p-6 rounded-2xl shadow-md hover:shadow-lg transition-all border border-primary-light/10 group relative overflow-hidden`}>
+                    <div key={i} className={`${m.color} p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all border border-gray-100/10 group relative overflow-hidden`}>
                         {/* Subtle pattern or gradient overlay for professional look */}
                         <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-6 -mt-6 transition-all group-hover:bg-white/10"></div>
 
                         <div className="flex justify-between items-start mb-2 relative z-10">
-                            <p className="text-sm font-bold text-primary-light uppercase tracking-tight">{m.label}</p>
+                            <p className={cn(
+                                "text-[10px] font-black uppercase tracking-[0.15em]",
+                                m.color === 'bg-[#0f172a]' ? "text-gray-400" : "text-primary-light/80"
+                            )}>
+                                {m.label}
+                            </p>
                         </div>
-                        <p className={cn("font-black text-white truncate relative z-10", m.sub ? "text-sm mt-3 text-gray-200" : "text-4xl mt-1")}>
+                        <p className={cn(
+                            "font-black text-white truncate relative z-10",
+                            m.sub ? "text-[11px] mt-4 text-gray-200 leading-relaxed font-bold" : "text-4xl mt-1 tracking-tight"
+                        )}>
                             {m.value || '0'}
                         </p>
                     </div>
