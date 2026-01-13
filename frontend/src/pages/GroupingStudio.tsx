@@ -13,6 +13,9 @@ interface LogGroup {
     "diagnosis.status": string;
     count: number;
     last_seen: string;
+    logger_name: string;
+    group_signature?: string;
+    "diagnosis.report"?: string;
 }
 
 // --- UI Components (Inline for portability) ---
@@ -169,7 +172,8 @@ export default function GroupingStudio() {
                 group_type: i % 2 === 0 ? "Timeout" : "NullPtr",
                 count: Math.floor(Math.random() * 100) + 1,
                 last_seen: "2024-03-12 11:20:00",
-                "diagnosis.status": "PENDING"
+                "diagnosis.status": "PENDING",
+                logger_name: i % 2 === 0 ? "com.pega.BillingService" : "com.pega.AuthService"
             }));
             setData(mockData);
             setFilteredData(mockData);

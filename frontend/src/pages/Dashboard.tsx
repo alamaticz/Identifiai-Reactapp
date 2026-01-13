@@ -431,7 +431,7 @@ const Dashboard: React.FC = () => {
                         <table className="w-full text-left border-collapse">
                             <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 shadow-sm border-b border-gray-100">
                                 <tr>
-                                    {['Inspect', 'Last Seen', 'Full Signature', 'Type', 'Count', 'Status', 'Rule Name', 'Log Message', 'Logger', 'Exception Info', 'Report'].map((header, idx) => (
+                                    {['Inspect', 'Last Seen', 'Full Signature', 'Type', 'Count', 'Status', 'Rule Name', 'Log Message', 'Logger', 'Exception Info', 'Report'].map((header) => (
                                         <th key={header} className="px-8 py-5 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] group relative transition-colors hover:text-primary">
                                             <div className="flex items-center space-x-2">
                                                 <span>{header}</span>
