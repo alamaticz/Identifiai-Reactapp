@@ -16,6 +16,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activePage, onPageChange, onLogout }) => {
     const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -24,12 +25,39 @@ const Layout: React.FC<LayoutProps> = ({ children, activePage, onPageChange, onL
         { id: 'upload', label: 'Upload Logs', icon: Upload },
     ];
 
+    const closeSidebar = () => setIsSidebarOpen(false);
+
     return (
-        <div className="flex h-screen bg-[#f0f2f6] overflow-hidden">
+        <div className="flex h-screen bg-[#f0f2f6] overflow-hidden relative">
+            {/* Mobile Header Toggle */}
+            <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-sidebar border-b border-sidebar-muted flex items-center justify-between px-6 z-[60] shadow-lg">
+                <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
+                <button
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+                >
+                    <LayoutGrid className="w-6 h-6" />
+                </button>
+            </div>
+
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div
+                    className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] animate-in fade-in duration-300"
+                    onClick={closeSidebar}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-80 bg-sidebar border-r border-sidebar-muted flex flex-col shadow-2xl">
+            <aside className={cn(
+                "fixed lg:static inset-y-0 left-0 w-80 bg-sidebar border-r border-sidebar-muted flex flex-col shadow-2xl z-[80] transition-transform duration-300 lg:translate-x-0",
+                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            )}>
                 <div className="p-8 pb-4 flex items-center justify-between">
                     <img src="/logo.png" alt="Alamaticz Solutions" className="w-[85%] h-auto rounded-lg" />
+                    <button className="lg:hidden text-white/50 hover:text-white" onClick={closeSidebar}>
+                        <ChevronUp className="-rotate-90 w-6 h-6" />
+                    </button>
                 </div>
                 <div className="px-8 mb-2">
                     <hr className="border-white/10" />
@@ -39,7 +67,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activePage, onPageChange, onL
                     {navItems.map((item) => (
                         <button
                             key={item.id}
-                            onClick={() => onPageChange(item.id)}
+                            onClick={() => {
+                                onPageChange(item.id);
+                                closeSidebar();
+                            }}
                             className={cn(
                                 "w-full flex items-center space-x-4 px-6 py-4 rounded-xl text-lg font-medium transition-all duration-200",
                                 activePage === item.id
@@ -58,7 +89,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activePage, onPageChange, onL
 
                     {/* Profile Dropdown Menu */}
                     {isProfileOpen && (
-                        <div className="absolute bottom-28 left-4 right-4 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 animate-in slide-in-from-bottom-2 duration-200 z-50">
+                        <div className="absolute bottom-28 left-4 right-4 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 animate-in slide-in-from-bottom-2 duration-200 z-[90]">
                             <button className="w-full flex items-center space-x-3 px-6 py-3 hover:bg-gray-50 text-gray-700 transition-colors text-sm font-semibold">
                                 <User className="w-4 h-4 text-gray-400" />
                                 <span>Profile</span>
@@ -104,10 +135,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activePage, onPageChange, onL
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto relative bg-[#f8f9fa]">
-                <div className="p-10 max-w-[1600px] mx-auto min-h-screen">
+            <main className="flex-1 overflow-y-auto relative bg-[#f8f9fa] pt-16 lg:pt-0">
+                <div className="p-6 sm:p-10 max-w-[1600px] mx-auto min-h-screen">
                     <header className="mb-10 text-center">
-                        <h1 className="text-4xl font-extrabold text-text-primary mb-2 tracking-tight">Alamaticz IdentifAI 2.0</h1>
+                        <h1 className="text-3xl sm:text-4xl font-extrabold text-text-primary mb-2 tracking-tight">Alamaticz IdentifAI 2.0</h1>
                     </header>
                     {children}
                 </div>

@@ -449,7 +449,7 @@ export default function GroupingStudio() {
                         <CardTitle className="text-lg">2. Pattern Analysis & Save</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">Rule Name</label>
                                 <Input value={ruleName} onChange={(e) => setRuleName(e.target.value)} placeholder="e.g. Activity Timeouts" />

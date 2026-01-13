@@ -188,10 +188,10 @@ const Dashboard: React.FC = () => {
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
             {/* Header Area */}
-            <div className="flex items-center justify-between pb-2">
-                <h2 className="text-3xl font-black text-text-primary flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+                <h2 className="text-2xl sm:text-3xl font-black text-text-primary flex items-center space-x-3">
                     <div className="bg-white p-2 rounded-xl shadow-sm border border-border">
-                        <Activity className="w-8 h-8 text-primary" />
+                        <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
                     </div>
                     <span>Pega Log Analysis Dashboard</span>
                 </h2>
@@ -229,7 +229,7 @@ const Dashboard: React.FC = () => {
 
             {/* Main Data Table */}
             <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-8 px-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 px-2">
                     <div className="space-y-3">
                         <label className="text-sm font-bold text-[#31333f] ml-1">Filter by Status</label>
                         <div className="relative">
@@ -566,7 +566,7 @@ const Dashboard: React.FC = () => {
                     <span className="h-px bg-border flex-1"></span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-10">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <div className="bg-white p-10 rounded-[40px] border border-border shadow-xl overflow-hidden relative">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary-light/20 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
                         <h4 className="text-lg font-black text-text-primary mb-10 flex items-center space-x-2">
