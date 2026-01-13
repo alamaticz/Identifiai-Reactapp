@@ -328,39 +328,40 @@ export default function GroupingStudio() {
                         <table className="w-full text-sm text-left">
                             <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200 sticky top-0 z-10">
                                 <tr>
-                                    <th className="h-10 px-4 w-[50px]">
+                                    <th className="h-10 px-4 w-[50px] sticky left-0 bg-gray-50 z-20">
                                         <Checkbox
                                             checked={selectedIds.length === filteredData.length && filteredData.length > 0}
                                             onCheckedChange={(checked) => handleSelectAll(checked)}
                                         />
                                     </th>
                                     <th className="h-10 px-4 whitespace-nowrap">Last Seen</th>
-                                    <th className="h-10 px-4 whitespace-nowrap">Status</th>
-                                    <th className="h-10 px-4 whitespace-nowrap">Rule Name</th>
                                     <th className="h-10 px-4 whitespace-nowrap">Full Signature</th>
                                     <th className="h-10 px-4 whitespace-nowrap">Type</th>
-                                    <th className="h-10 px-4 whitespace-nowrap">Logger</th>
-                                    <th className="h-10 px-4 whitespace-nowrap">Log Message</th>
                                     <th className="h-10 px-4 whitespace-nowrap">Count</th>
+                                    <th className="h-10 px-4 whitespace-nowrap">Status</th>
+                                    <th className="h-10 px-4 whitespace-nowrap">Rule Name</th>
+                                    <th className="h-10 px-4 whitespace-nowrap">Log Message</th>
+                                    <th className="h-10 px-4 whitespace-nowrap">Logger</th>
+                                    <th className="h-10 px-4 whitespace-nowrap">Exception Info</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={9} className="text-center py-8">
+                                        <td colSpan={10} className="text-center py-8">
                                             <Loader2 className="h-6 w-6 animate-spin mx-auto text-blue-500" />
                                         </td>
                                     </tr>
                                 ) : filteredData.length === 0 ? (
                                     <tr>
-                                        <td colSpan={9} className="text-center py-8 text-gray-400">
+                                        <td colSpan={10} className="text-center py-8 text-gray-400">
                                             No logs found.
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredData.map((item) => (
                                         <tr key={item.doc_id} className={`hover:bg-gray-50/50 transition-colors ${selectedIds.includes(item.doc_id) ? "bg-blue-50/50" : ""}`}>
-                                            <td className="p-4 align-top">
+                                            <td className="p-4 align-top sticky left-0 bg-inherit z-20">
                                                 <Checkbox
                                                     checked={selectedIds.includes(item.doc_id)}
                                                     onCheckedChange={(checked) => handleSelectOne(item.doc_id, checked)}
@@ -369,16 +370,29 @@ export default function GroupingStudio() {
                                             <td className="p-4 whitespace-nowrap text-gray-500 align-top">
                                                 {item.last_seen ? new Date(item.last_seen).toLocaleString() : 'N/A'}
                                             </td>
+                                            <td className="p-4 text-gray-500 text-xs font-mono align-top max-w-[200px] truncate" title={item.doc_id}>
+                                                {item.doc_id}
+                                            </td>
+                                            <td className="p-4 align-top"><Badge variant="outline">{item.group_type}</Badge></td>
+                                            <td className="p-4 align-top">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-blue-500"
+                                                            style={{ width: `${Math.min((item.count / 1000) * 100, 100)}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-gray-600 font-medium">{item.count}</span>
+                                                </div>
+                                            </td>
                                             <td className="p-4 align-top">
                                                 <select
                                                     value={item["diagnosis.status"] || "PENDING"}
                                                     onChange={async (e) => {
                                                         const newStatus = e.target.value;
-                                                        // Optimistic update
                                                         const updatedData = data.map(d => d.doc_id === item.doc_id ? { ...d, "diagnosis.status": newStatus } : d);
                                                         setData(updatedData);
                                                         setFilteredData(updatedData);
-
                                                         try {
                                                             const formData = new FormData();
                                                             formData.append('doc_id', item.doc_id);
@@ -387,7 +401,7 @@ export default function GroupingStudio() {
                                                             showNotification("Status Updated", `Updated status to ${newStatus}`);
                                                         } catch (error) {
                                                             showNotification("Update Failed", "Failed to persist status update", "error");
-                                                            fetchData(); // Revert on failure
+                                                            fetchData();
                                                         }
                                                     }}
                                                     className="bg-white border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
@@ -400,31 +414,14 @@ export default function GroupingStudio() {
                                             <td className="p-4 font-medium text-gray-900 align-top max-w-[200px] truncate" title={item.display_rule}>
                                                 {item.display_rule}
                                             </td>
-                                            <td className="p-4 text-gray-500 text-xs font-mono align-top max-w-[200px] truncate" title={item.doc_id}>
-                                                {item.doc_id}
+                                            <td className="p-4 max-w-[300px] truncate text-gray-600 align-top" title={item.message_summary}>
+                                                {item.message_summary}
                                             </td>
-                                            <td className="p-4 align-top"><Badge variant="outline">{item.group_type}</Badge></td>
-
-                                            <td className="p-4 text-gray-500 align-top max-w-[150px] truncate" title={(item as any).logger_name || "N/A"}>
-                                                {(item as any).logger_name || "N/A"}
+                                            <td className="p-4 text-gray-500 align-top max-w-[150px] truncate" title={item.logger_name || "N/A"}>
+                                                {item.logger_name || "N/A"}
                                             </td>
-
-                                            <td className="p-4 max-w-[300px] truncate text-gray-600 align-top" title={item.exception_summary || item.message_summary}>
-                                                <div className="flex flex-col gap-1">
-                                                    {item.exception_summary && <span className="font-mono text-xs text-red-600 truncate">{item.exception_summary}</span>}
-                                                    <span className="truncate">{item.message_summary}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-4 align-top">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-blue-500"
-                                                            style={{ width: `${Math.min((item.count / 1000) * 100, 100)}%` }} // Rough relative scale
-                                                        />
-                                                    </div>
-                                                    <span className="text-gray-600 font-medium">{item.count}</span>
-                                                </div>
+                                            <td className="p-4 text-red-600 text-xs font-mono align-top max-w-[200px] truncate" title={item.exception_summary}>
+                                                {item.exception_summary || "N/A"}
                                             </td>
                                         </tr>
                                     ))

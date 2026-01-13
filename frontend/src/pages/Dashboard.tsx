@@ -24,9 +24,10 @@ const Dashboard: React.FC = () => {
     const [typeOptions, setTypeOptions] = useState<string[]>(["Exception", "RuleSequence", "CSP Violation", "Logger", "Pega Engine Errors"]);
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+    const [sortBy, setSortBy] = useState<string>("last_seen");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<string | null>(null);
-    const [openColumnMenu, setOpenColumnMenu] = useState<string | null>(null);
     const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
     const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
     const [inspectingId, setInspectingId] = useState<string | null>(null);
@@ -81,9 +82,9 @@ const Dashboard: React.FC = () => {
             ]);
 
             setTableData([
-                { doc_id: '1', last_seen: new Date().toISOString(), group_signature: 'com.pega.pegarules.pub.PRRuntimeException: Section execution terminated', group_type: 'Exception', count: 142, 'diagnosis.status': 'PENDING', display_rule: 'Data-Admin-Operator-ID' },
-                { doc_id: '2', last_seen: new Date(Date.now() - 3600000).toISOString(), group_signature: 'Database-Lock-Failure-Timeout: Unable to acquire lock on CASE-1234', group_type: 'LogMessage', count: 89, 'diagnosis.status': 'IN PROCESS', display_rule: 'Work-Case-Review' },
-                { doc_id: '3', last_seen: new Date(Date.now() - 7200000).toISOString(), group_signature: 'Step status fail: Service REST invocation failed with 500 Internal Server Error', group_type: 'RuleSequence', count: 67, 'diagnosis.status': 'PENDING', display_rule: 'Pega-Int-Connector' },
+                { doc_id: '1', last_seen: new Date().toISOString(), group_signature: 'com.pega.pegarules.pub.PRRuntimeException: Section execution terminated', group_type: 'Exception', count: 142, 'diagnosis.status': 'PENDING', display_rule: 'Data-Admin-Operator-ID', message_summary: 'Section execution failed', logger_name: 'com.pega.PRRuntime', exception_summary: 'Stack trace content here...', 'diagnosis.report': 'Executive Summary: Issue identified...' },
+                { doc_id: '2', last_seen: new Date(Date.now() - 3600000).toISOString(), group_signature: 'Database-Lock-Failure-Timeout: Unable to acquire lock on CASE-1234', group_type: 'LogMessage', count: 89, 'diagnosis.status': 'IN PROCESS', display_rule: 'Work-Case-Review', message_summary: 'Lock failure on DB', logger_name: 'com.pega.DB', exception_summary: 'DB lock timeout...', 'diagnosis.report': 'Root Cause: Connection pool exhaustion...' },
+                { doc_id: '3', last_seen: new Date(Date.now() - 7200000).toISOString(), group_signature: 'Step status fail: Service REST invocation failed with 500 Internal Server Error', group_type: 'RuleSequence', count: 67, 'diagnosis.status': 'PENDING', display_rule: 'Pega-Int-Connector', message_summary: 'REST integration error', logger_name: 'com.pega.Integration', exception_summary: 'HTTP 500 received...', 'diagnosis.report': 'Resolution: Check service provider...' },
             ]);
 
             setTopErrors([
@@ -147,16 +148,29 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    const handleColumnMenuClick = (column: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setOpenColumnMenu(openColumnMenu === column ? null : column);
-    };
+    const filteredTableData = tableData
+        .filter(row => {
+            const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(row['diagnosis.status']);
+            const matchesType = selectedTypes.length === 0 || selectedTypes.includes(row['group_type']);
+            return matchesStatus && matchesType;
+        })
+        .sort((a, b) => {
+            let valA = a[sortBy];
+            let valB = b[sortBy];
 
-    const filteredTableData = tableData.filter(row => {
-        const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(row['diagnosis.status']);
-        const matchesType = selectedTypes.length === 0 || selectedTypes.includes(row['group_type']);
-        return matchesStatus && matchesType;
-    });
+            // Handle nested status
+            if (sortBy === 'status') {
+                valA = a['diagnosis.status'];
+                valB = b['diagnosis.status'];
+            } else if (sortBy === 'last_seen') {
+                valA = new Date(a[sortBy]).getTime();
+                valB = new Date(b[sortBy]).getTime();
+            }
+
+            if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+            if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -318,12 +332,49 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
-                    <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-white/50 backdrop-blur-md">
+                    <div className="p-8 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between bg-white/50 backdrop-blur-md gap-6">
                         <div className="flex items-center gap-4">
                             <h3 className="text-xl font-extrabold text-[#31333f] flex items-center space-x-3">
                                 <FileText className="w-8 h-8 text-primary bg-[#f8f9fa] p-1.5 rounded-lg" />
                                 <span>Detailed Group Analysis</span>
                             </h3>
+
+                            {/* Universal Sorting UI */}
+                            <div className="hidden lg:flex items-center space-x-4 bg-gray-50 p-2 rounded-2xl border border-gray-100 ml-4">
+                                <span className="text-[10px] font-black uppercase text-gray-400 ml-2">Sort By:</span>
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                    className="bg-transparent text-sm font-bold text-gray-700 outline-none cursor-pointer"
+                                >
+                                    <option value="last_seen">Last Seen</option>
+                                    <option value="count">Count</option>
+                                    <option value="group_signature">Full Signature</option>
+                                    <option value="group_type">Type</option>
+                                    <option value="status">Status</option>
+                                </select>
+                                <div className="h-4 w-px bg-gray-200 mx-2"></div>
+                                <div className="flex items-center bg-white rounded-xl shadow-sm border border-gray-100">
+                                    <button
+                                        onClick={() => setSortOrder('asc')}
+                                        className={cn(
+                                            "px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-l-xl transition-all",
+                                            sortOrder === 'asc' ? "bg-primary text-white" : "text-gray-400 hover:text-gray-600"
+                                        )}
+                                    >
+                                        Asc
+                                    </button>
+                                    <button
+                                        onClick={() => setSortOrder('desc')}
+                                        className={cn(
+                                            "px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-r-xl transition-all",
+                                            sortOrder === 'desc' ? "bg-primary text-white" : "text-gray-400 hover:text-gray-600"
+                                        )}
+                                    >
+                                        Desc
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-6">
@@ -350,86 +401,43 @@ const Dashboard: React.FC = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Mobile Sort UI */}
+                    <div className="lg:hidden px-8 py-4 bg-gray-50 border-b border-gray-100 grid grid-cols-2 gap-4">
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 outline-none shadow-sm"
+                        >
+                            <option value="last_seen">Sort By: Last Seen</option>
+                            <option value="count">Sort By: Count</option>
+                            <option value="group_signature">Sort By: Signature</option>
+                            <option value="status">Sort By: Status</option>
+                        </select>
+                        <div className="flex items-center bg-white rounded-xl shadow-sm border border-gray-200">
+                            <button
+                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                className="w-full h-full text-[10px] font-black uppercase tracking-widest text-primary flex items-center justify-center gap-2"
+                            >
+                                <span>{sortOrder === 'asc' ? 'Ascending' : 'Descending'}</span>
+                                <svg className={cn("w-3 h-3 transition-transform", sortOrder === 'desc' ? "rotate-180" : "")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 15l7-7 7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="overflow-x-auto max-h-[600px] custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 shadow-sm border-b border-gray-100">
                                 <tr>
                                     {['Inspect', 'Last Seen', 'Full Signature', 'Type', 'Count', 'Status', 'Rule Name', 'Log Message', 'Logger', 'Exception Info', 'Report'].map((header, idx) => (
-                                        <th key={header} className="px-8 py-5 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] group cursor-pointer relative">
-                                            <div className="flex items-center justify-between">
+                                        <th key={header} className="px-8 py-5 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] group relative transition-colors hover:text-primary">
+                                            <div className="flex items-center space-x-2">
                                                 <span>{header}</span>
-                                                <div className="relative">
-                                                    <svg
-                                                        className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity cursor-pointer text-gray-800"
-                                                        fill="currentColor"
-                                                        viewBox="0 0 16 16"
-                                                        onClick={(e) => handleColumnMenuClick(header, e)}
-                                                    >
-                                                        <circle cx="3" cy="8" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="13" cy="8" r="1.5" />
-                                                    </svg>
-                                                    {openColumnMenu === header && (
-                                                        <div className={cn(
-                                                            "absolute top-8 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50",
-                                                            idx <= 2 ? "left-0" : "right-0"
-                                                        )}>
-                                                            <div className="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
-                                                                <span className="text-sm font-bold text-gray-800">{header}</span>
-                                                                <div className="flex items-center space-x-1">
-                                                                    <button className="p-1 hover:bg-gray-50 rounded">
-                                                                        <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                                                                        </svg>
-                                                                    </button>
-                                                                    <button className="p-1 hover:bg-gray-50 rounded">
-                                                                        <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                                                        </svg>
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                            <button className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                                                                </svg>
-                                                                <span>Sort ascending</span>
-                                                            </button>
-                                                            <button className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
-                                                                </svg>
-                                                                <span>Sort descending</span>
-                                                            </button>
-                                                            <div className="border-t border-gray-50 my-1"></div>
-                                                            <button className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                                                                </svg>
-                                                                <span>Format</span>
-                                                                <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                                                </svg>
-                                                            </button>
-                                                            <button className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                                                                </svg>
-                                                                <span>Autosize</span>
-                                                            </button>
-                                                            <button className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                                                                </svg>
-                                                                <span>Pin column</span>
-                                                            </button>
-                                                            <button className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                                                </svg>
-                                                                <span>Hide column</span>
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                {sortBy === header.toLowerCase().replace(' ', '_') && (
+                                                    <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                                                )}
                                             </div>
                                         </th>
                                     ))}
