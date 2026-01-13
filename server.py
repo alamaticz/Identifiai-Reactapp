@@ -34,17 +34,8 @@ try:
     # Added allow_origin_regex for better Netlify support
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:5173",
-            "https://identifiai.netlify.app",
-            "https://identifai.netlify.app",
-            "https://identifiai-reactapp.netlify.app",
-            "https://identifiai-reactapp.vercel.app",
-        ],
-        allow_origin_regex=r"https://.*\.(netlify\.app|vercel\.app)",
-        allow_credentials=True,
+        allow_origins=["*"],
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
