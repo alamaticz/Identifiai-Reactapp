@@ -89,7 +89,7 @@ const UploadLogs: React.FC = () => {
     return (
         <div className="max-w-3xl mx-auto py-10 animate-in fade-in duration-500">
             {/* Main Upload Card */}
-            <div className="bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl border border-gray-100 p-6 sm:p-10 relative">
+            <div className="bg-white rounded-[32px] shadow-2xl border border-gray-100 p-10 relative">
                 {/* Close button (mock) */}
                 <button className="absolute top-8 right-8 text-gray-400 hover:text-gray-600">
                     <X className="w-6 h-6" />
@@ -106,7 +106,7 @@ const UploadLogs: React.FC = () => {
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
                     className={cn(
-                        "relative border-2 border-dashed rounded-[24px] p-8 sm:p-16 flex flex-col items-center justify-center transition-all duration-300",
+                        "relative border-2 border-dashed rounded-[24px] p-16 flex flex-col items-center justify-center transition-all duration-300",
                         isDragging ? "border-[#ee4a4a] bg-red-50/30" : "border-gray-200 bg-gray-50/20 hover:border-gray-300"
                     )}
                 >
@@ -159,7 +159,7 @@ const UploadLogs: React.FC = () => {
                                         </div>
                                         <button
                                             onClick={() => removeFile(f.id)}
-                                            className="text-gray-300 hover:text-red-500 transition-colors bg-gray-50 p-1.5 rounded-lg group-hover:bg-red-50 shrink-0"
+                                            className="text-gray-300 hover:text-red-500 transition-colors bg-gray-50 p-1.5 rounded-lg group-hover:bg-red-50"
                                             disabled={isGlobalLoading}
                                         >
                                             {f.status === 'completed' ? <Trash2 className="w-4 h-4" /> : <X className="w-4 h-4" />}
@@ -190,7 +190,7 @@ const UploadLogs: React.FC = () => {
                 <div className="mt-12 flex items-center justify-end space-x-4">
                     <button
                         onClick={() => setUploadingFiles([])}
-                        className="w-full sm:w-auto px-6 sm:px-10 py-3 sm:py-4 rounded-2xl text-sm font-black text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest border border-gray-100 hover:bg-gray-50"
+                        className="px-10 py-4 rounded-2xl text-sm font-black text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest border border-gray-100 hover:bg-gray-50"
                         disabled={isGlobalLoading}
                     >
                         Clear
@@ -198,7 +198,7 @@ const UploadLogs: React.FC = () => {
                     <button
                         onClick={handleUploadAll}
                         disabled={isGlobalLoading || uploadingFiles.filter(f => f.status === 'pending').length === 0}
-                        className="w-full sm:w-auto px-6 sm:px-10 py-3 sm:py-4 rounded-2xl text-sm font-black text-white bg-gradient-to-r from-[#ee4a4a] to-[#d63a3a] shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest disabled:opacity-50 disabled:scale-100"
+                        className="px-10 py-4 rounded-2xl text-sm font-black text-white bg-gradient-to-r from-[#ee4a4a] to-[#d63a3a] shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest disabled:opacity-50 disabled:scale-100"
                     >
                         {isGlobalLoading ? (
                             <div className="flex items-center space-x-2">

@@ -159,21 +159,8 @@ export default function GroupingStudio() {
             setData(response.data);
             setFilteredData(response.data);
         } catch (error) {
-            console.error("Error fetching data, using mock fallback:", error);
-            // Mock fallback data for development
-            const mockData: LogGroup[] = Array.from({ length: 5 }, (_, i) => ({
-                doc_id: `mock-${i + 1}`,
-                display_rule: i % 2 === 0 ? "Timeout Exception in Billing" : "Null Pointer in Auth",
-                exception_summary: i % 2 === 0 ? "java.util.concurrent.TimeoutException" : "java.lang.NullPointerException",
-                message_summary: i % 2 === 0 ? "Failed to process invoice due to timeout" : "Authentication failed for user null",
-                group_type: i % 2 === 0 ? "Timeout" : "NullPtr",
-                count: Math.floor(Math.random() * 100) + 1,
-                last_seen: "2024-03-12 11:20:00",
-                "diagnosis.status": "PENDING"
-            }));
-            setData(mockData);
-            setFilteredData(mockData);
-            showNotification("Preview Mode", "Backend not detected, using mock data.", "success");
+            console.error("Error fetching data:", error);
+            showNotification("Error", "Failed to fetch logs data.", "error");
         } finally {
             setLoading(false);
         }
@@ -313,7 +300,7 @@ export default function GroupingStudio() {
                     <CardTitle className="text-lg">1. Find Similar Groups</CardTitle>
                     <CardDescription>Select groups that represent the same issue but are split incorrectly.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 p-4 sm:p-6">
+                <CardContent className="space-y-4">
                     <div className="relative">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                         <Input
@@ -432,9 +419,9 @@ export default function GroupingStudio() {
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500 gap-4">
+                    <div className="flex justify-between items-center text-sm text-gray-500">
                         <span>{selectedIds.length} items selected</span>
-                        <Button onClick={generatePattern} disabled={selectedIds.length === 0 || isGenerating} className="gap-2 w-full sm:w-auto">
+                        <Button onClick={generatePattern} disabled={selectedIds.length === 0 || isGenerating} className="gap-2">
                             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                             Generate Regex Pattern
                         </Button>
@@ -448,8 +435,8 @@ export default function GroupingStudio() {
                     <CardHeader>
                         <CardTitle className="text-lg">2. Pattern Analysis & Save</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6 p-4 sm:p-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <CardContent className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">Rule Name</label>
                                 <Input value={ruleName} onChange={(e) => setRuleName(e.target.value)} placeholder="e.g. Activity Timeouts" />
@@ -487,7 +474,7 @@ export default function GroupingStudio() {
                         <h3 className="text-lg font-medium text-gray-900">Apply Changes</h3>
                         <p className="text-sm text-gray-500">Reprocess all logs with the updated rule library. This mimics the "Run Grouping" action.</p>
                     </div>
-                    <Button size="lg" onClick={applyChanges} disabled={isApplying} className="bg-green-600 hover:bg-green-700 text-white gap-2 w-full sm:w-auto">
+                    <Button size="lg" onClick={applyChanges} disabled={isApplying} className="bg-green-600 hover:bg-green-700 text-white gap-2">
                         {isApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                         Apply Rules Now
                     </Button>
