@@ -56,8 +56,14 @@ const Dashboard: React.FC = () => {
             setTrends(trendRes.data);
             setStatusOptions(optionsRes.data);
             setTypeOptions(typeRes.data);
-        } catch (err) {
-            console.warn("Backend not detected, using high-fidelity mock data for UI preview.");
+        } catch (err: any) {
+            console.error("Backend connection failed at:", API_ENDPOINTS.METRICS);
+            console.error("Error details:", err.message);
+
+            // Show a more informative warning in development/debug
+            if (process.env.NODE_ENV === 'development') {
+                console.warn("Using mock data as fallback.");
+            }
 
             // Mock Data Fallbacks
             setMetrics({
