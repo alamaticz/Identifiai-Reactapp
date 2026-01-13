@@ -202,18 +202,15 @@ const Dashboard: React.FC = () => {
                 {[
                     { label: 'Total Errors', value: metrics?.total_errors, color: 'bg-[#0f172a]' },
                     { label: 'Unique Issues', value: metrics?.unique_issues, color: 'bg-[#0f172a]' },
-                    { label: 'Top Rule Failure', value: metrics?.most_frequent, sub: true, color: 'bg-metrics-failure' },
-                    { label: 'Recent Ingestion', value: metrics?.last_incident, color: 'bg-metrics-ingestion' },
+                    { label: 'Top Rule Failure', value: metrics?.most_frequent, sub: true, color: 'bg-[#0f172a]' },
+                    { label: 'Recent Ingestion', value: metrics?.last_incident, color: 'bg-[#0f172a]' },
                 ].map((m, i) => (
                     <div key={i} className={`${m.color} p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all border border-gray-100/10 group relative overflow-hidden`}>
                         {/* Subtle pattern or gradient overlay for professional look */}
                         <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-6 -mt-6 transition-all group-hover:bg-white/10"></div>
 
                         <div className="flex justify-between items-start mb-2 relative z-10">
-                            <p className={cn(
-                                "text-[10px] font-black uppercase tracking-[0.15em]",
-                                m.color === 'bg-[#0f172a]' ? "text-gray-400" : "text-primary-light/80"
-                            )}>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">
                                 {m.label}
                             </p>
                         </div>
