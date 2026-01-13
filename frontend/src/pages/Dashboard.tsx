@@ -13,6 +13,43 @@ export function cn(...inputs: ClassValue[]) {
 
 const COLORS = ['#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c', '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5'];
 
+const AnimatedCounter = ({ value }: { value: string | number }) => {
+    const [displayValue, setDisplayValue] = useState(0);
+
+    useEffect(() => {
+        const numericValue = typeof value === 'string'
+            ? parseInt(value.replace(/,/g, ''), 10)
+            : typeof value === 'number' ? value : 0;
+
+        if (isNaN(numericValue)) return;
+
+        let startTime: number | null = null;
+        const duration = 2000; // 2 seconds
+
+        const animate = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const progress = timestamp - startTime;
+            const percentage = Math.min(progress / duration, 1);
+
+            // Ease out quart function for smooth deceleration
+            const easeOutQuart = 1 - Math.pow(1 - percentage, 4);
+
+            const currentCount = Math.floor(easeOutQuart * numericValue);
+            setDisplayValue(currentCount);
+
+            if (percentage < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                setDisplayValue(numericValue);
+            }
+        };
+
+        requestAnimationFrame(animate);
+    }, [value]);
+
+    return <>{displayValue.toLocaleString()}</>;
+};
+
 const Dashboard: React.FC = () => {
     const [metrics, setMetrics] = useState<any>(null);
     const [logLevels, setLogLevels] = useState<any[]>([]);
@@ -198,10 +235,10 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Metrics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {[
-                    { label: 'Total Errors', value: metrics?.total_errors, color: 'bg-metrics-errors' },
-                    { label: 'Unique Issues', value: metrics?.unique_issues, color: 'bg-metrics-unique' },
+                    { label: 'Total Errors', value: metrics?.total_errors, color: 'bg-metrics-errors', isNumeric: true },
+                    { label: 'Unique Issues', value: metrics?.unique_issues, color: 'bg-metrics-unique', isNumeric: true },
                     { label: 'Top Rule Failure', value: metrics?.most_frequent, sub: true, color: 'bg-metrics-failure' },
                     { label: 'Recent Ingestion', value: metrics?.last_incident, color: 'bg-metrics-ingestion' },
                 ].map((m, i) => (
@@ -213,7 +250,11 @@ const Dashboard: React.FC = () => {
                             <p className="text-sm font-bold text-primary-light uppercase tracking-tight">{m.label}</p>
                         </div>
                         <p className={cn("font-black text-white truncate relative z-10", m.sub ? "text-sm mt-3 text-gray-200" : "text-4xl mt-1")}>
-                            {m.value || '0'}
+                            {m.isNumeric ? (
+                                <AnimatedCounter value={m.value || 0} />
+                            ) : (
+                                m.value || '0'
+                            )}
                         </p>
                     </div>
                 ))}
@@ -227,7 +268,7 @@ const Dashboard: React.FC = () => {
                         <div className="relative">
                             <button
                                 onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-                                className="w-full h-[58px] px-4 bg-[#f0f2f6] border border-gray-200 rounded-xl text-sm text-left text-gray-500 outline-none focus:ring-2 focus:ring-red-100 transition-all flex items-center justify-between"
+                                className="w-full h-[52px] sm:h-[58px] px-4 bg-[#f0f2f6] border border-gray-200 rounded-xl text-sm text-left text-gray-500 outline-none focus:ring-2 focus:ring-red-100 transition-all flex items-center justify-between"
                             >
                                 <span>{selectedStatuses.length === 0 ? 'Choose options' : `${selectedStatuses.length} selected`}</span>
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,7 +312,7 @@ const Dashboard: React.FC = () => {
                         <div className="relative">
                             <button
                                 onClick={() => setTypeDropdownOpen(!typeDropdownOpen)}
-                                className="w-full h-[58px] px-4 bg-[#f0f2f6] border border-gray-200 rounded-xl text-sm text-left text-gray-500 outline-none focus:ring-2 focus:ring-blue-100 transition-all flex items-center justify-between"
+                                className="w-full h-[52px] sm:h-[58px] px-4 bg-[#f0f2f6] border border-gray-200 rounded-xl text-sm text-left text-gray-500 outline-none focus:ring-2 focus:ring-blue-100 transition-all flex items-center justify-between"
                             >
                                 <span>{selectedTypes.length === 0 ? 'Choose options' : `${selectedTypes.length} selected`}</span>
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,15 +354,15 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
-                    <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-white/50 backdrop-blur-md">
-                        <div className="flex items-center gap-4">
+                    <div className="p-4 sm:p-8 border-b border-gray-50 flex flex-col sm:flex-row items-center justify-between bg-white/50 backdrop-blur-md gap-4">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
                             <h3 className="text-xl font-extrabold text-[#31333f] flex items-center space-x-3">
                                 <FileText className="w-8 h-8 text-primary bg-[#f8f9fa] p-1.5 rounded-lg" />
                                 <span>Detailed Group Analysis</span>
                             </h3>
                         </div>
 
-                        <div className="flex items-center gap-6">
+                        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
                             <button
                                 onClick={runAnalysis}
                                 disabled={isAnalyzing}
@@ -558,15 +599,15 @@ const Dashboard: React.FC = () => {
                     <span className="h-px bg-border flex-1"></span>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    <div className="bg-white p-10 rounded-[40px] border border-border shadow-xl overflow-hidden relative">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-10">
+                    <div className="bg-white p-6 sm:p-10 rounded-[24px] sm:rounded-[40px] border border-border shadow-xl overflow-hidden relative">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary-light/20 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
                         <h4 className="text-lg font-black text-text-primary mb-10 flex items-center space-x-2">
                             <div className="w-2 h-6 bg-primary rounded-full"></div>
                             <span>Log Level Distribution</span>
                         </h4>
-                        <div className="h-[300px] min-h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
                                     <Pie
                                         data={logLevels}
@@ -590,14 +631,14 @@ const Dashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white p-10 rounded-[40px] border border-border shadow-xl overflow-hidden relative">
+                    <div className="bg-white p-6 sm:p-10 rounded-[24px] sm:rounded-[40px] border border-border shadow-xl overflow-hidden relative">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-warning/20 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
                         <h4 className="text-lg font-black text-text-primary mb-10 flex items-center space-x-2">
                             <div className="w-2 h-6 bg-warning rounded-full"></div>
                             <span>Diagnosis Status Mapping</span>
                         </h4>
-                        <div className="h-[300px] min-h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
                                     <Pie
                                         data={diagnosisStatus}
@@ -623,22 +664,22 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* Top Error Groups Section */}
-                <div className="bg-white p-10 rounded-[40px] border border-border shadow-xl relative overflow-hidden">
+                <div className="bg-white p-6 sm:p-10 rounded-[24px] sm:rounded-[40px] border border-border shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-warning/20 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
                     <h4 className="text-xl font-black text-text-primary mb-12 flex items-center space-x-3">
                         <div className="w-2 h-8 bg-warning rounded-full"></div>
                         <span>Top Error Groups Breakdown</span>
                     </h4>
-                    <div className="h-[400px] min-h-[400px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={topErrors} layout="vertical" margin={{ left: 150 }}>
+                    <div className="h-[400px] w-full">
+                        <ResponsiveContainer width="100%" height={400}>
+                            <BarChart data={topErrors} layout="vertical" margin={{ left: window.innerWidth < 640 ? 40 : 150 }}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
                                 <XAxis type="number" hide />
                                 <YAxis
                                     dataKey="displayName"
                                     type="category"
-                                    tick={{ fontSize: 11, fontWeight: 'bold', fill: '#4b5563' }}
-                                    width={140}
+                                    tick={{ fontSize: 10, fontWeight: 'bold', fill: '#4b5563' }}
+                                    width={window.innerWidth < 640 ? 80 : 140}
                                     axisLine={false}
                                     tickLine={false}
                                 />
@@ -658,7 +699,7 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* Growth/Trend Card */}
-                <div className="bg-white p-10 rounded-[40px] border border-border shadow-xl relative overflow-hidden">
+                <div className="bg-white p-6 sm:p-10 rounded-[24px] sm:rounded-[40px] border border-border shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent"></div>
                     <div className="flex items-center justify-between mb-12">
                         <h4 className="text-xl font-black text-text-primary flex items-center space-x-3">
@@ -666,8 +707,8 @@ const Dashboard: React.FC = () => {
                             <span>Temporal Analysis: Error Trends</span>
                         </h4>
                     </div>
-                    <div className="h-[400px] min-h-[400px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-[400px] w-full">
+                        <ResponsiveContainer width="100%" height={400}>
                             <AreaChart data={trends}>
                                 <defs>
                                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">

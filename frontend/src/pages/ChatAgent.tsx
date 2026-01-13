@@ -64,9 +64,9 @@ const ChatAgent: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-[32px] shadow-xl border border-gray-100 overflow-hidden">
+        <div className="flex flex-col h-[calc(100vh-180px)] lg:h-[calc(100vh-140px)] bg-white rounded-[24px] sm:rounded-[32px] shadow-xl border border-gray-100 overflow-hidden">
             {/* Header */}
-            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center space-x-3">
+            <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex items-center space-x-3">
                 <div className="bg-gradient-to-br from-[#ee4a4a] to-[#d63a3a] p-2 rounded-xl shadow-md text-white">
                     <MessageSquare className="w-5 h-5" />
                 </div>
@@ -85,7 +85,7 @@ const ChatAgent: React.FC = () => {
                     <div
                         key={idx}
                         className={cn(
-                            "flex items-start space-x-3 max-w-[85%]",
+                            "flex items-start space-x-2 sm:space-x-3 max-w-[95%] sm:max-w-[85%]",
                             msg.role === 'user' ? "ml-auto flex-row-reverse space-x-reverse" : "mr-auto"
                         )}
                     >
@@ -133,7 +133,7 @@ const ChatAgent: React.FC = () => {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Ask about your logs..."
-                        className="w-full pl-5 pr-14 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-red-100 focus:border-[#ee4a4a] transition-all text-sm font-medium text-gray-700 placeholder:text-gray-400"
+                        className="w-full pl-4 sm:pl-5 pr-14 py-3 sm:py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-red-100 focus:border-[#ee4a4a] transition-all text-sm font-medium text-gray-700 placeholder:text-gray-400"
                         disabled={isLoading}
                     />
                     <button

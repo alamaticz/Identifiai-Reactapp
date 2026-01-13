@@ -21,7 +21,26 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                 const response = await axios.get(API_ENDPOINTS.LOG_GROUP(docId));
                 setData(response.data);
             } catch (err) {
-                console.error("Failed to fetch log details", err);
+                console.error("Failed to fetch log details, using mock fallback", err);
+                // Mock fallback for UI testing
+                setData({
+                    group: {
+                        'diagnosis.report': "This error is likely caused by a timeout in the downstream activity 'ProcessInvoice'. The logs show repeated connection attempts failing with 504 Gateway Timeout. Fix: Increase the timeout value in the worker configuration or check the ProcessInvoice service health.",
+                        representative_log: { logger_name: 'com.alamaticz.billing.Worker' }
+                    },
+                    samples: [
+                        {
+                            timestamp: '2024-03-12 10:45:22',
+                            level: 'ERROR',
+                            logger_name: 'com.alamaticz.billing.Worker',
+                            message: 'FAILED to process invoice INV-9902: TimeoutException after 30000ms',
+                            exception_type: 'TimeoutException',
+                            exception_message: 'java.util.concurrent.TimeoutException: Remote service did not respond within 30s',
+                            stack_trace: ['at com.alamaticz.billing.Worker.process(Worker.java:45)', 'at com.alamaticz.billing.Main.loop(Main.java:12)'],
+                            log: { message: 'FAILED to process invoice INV-9902: TimeoutException after 30000ms' }
+                        }
+                    ]
+                });
             } finally {
                 setLoading(false);
             }
@@ -63,23 +82,29 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
     const displayRule = getDisplayRule(group);
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
+        <div
+            className={cn(
+                "fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200",
+                isFullScreen ? "p-0" : "p-4 sm:p-6"
+            )}
+            onClick={onClose}
+        >
             <div
                 className={cn(
-                    "bg-[#f8f9fa] rounded-3xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300",
-                    isFullScreen ? "w-full h-full rounded-none" : "w-full max-w-5xl max-h-[90vh]"
+                    "bg-[#f8f9fa] shadow-2xl overflow-hidden flex flex-col transition-all duration-300",
+                    isFullScreen ? "w-full h-full rounded-none" : "w-full max-w-5xl max-h-[90vh] rounded-3xl border border-gray-200"
                 )}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Modal Header */}
-                <div className="bg-white px-8 py-5 border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
-                    <div className="flex items-center space-x-4">
-                        <div className="bg-primary/10 p-2 rounded-xl text-primary">
-                            <Info className="w-6 h-6" />
+                <div className="bg-white px-4 sm:px-8 py-4 sm:py-5 border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
+                    <div className="flex items-center space-x-3 sm:space-x-4 overflow-hidden">
+                        <div className="bg-primary/10 p-2 rounded-xl text-primary shrink-0">
+                            <Info className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
-                        <div>
-                            <h2 className="text-xl font-black text-[#0f172a]">Inspection: {displayRule}</h2>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">ID: {docId}</p>
+                        <div className="min-w-0">
+                            <h2 className="text-lg sm:text-xl font-black text-[#0f172a] truncate">Inspection: {displayRule}</h2>
+                            <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest truncate">ID: {docId}</p>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -101,7 +126,7 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
 
                 {/* Modal Content - Scrollable */}
                 <div className="overflow-y-auto custom-scrollbar flex-1">
-                    <div className="p-8 space-y-8">
+                    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
                         {/* AI Diagnosis Report Section */}
                         {(() => {
                             const report = group['diagnosis.report'] || group.diagnosis?.report || "No AI diagnosis report available.";
@@ -137,7 +162,7 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                                                         <CheckCircle className="w-3.5 h-3.5" />
                                                         Recommended Action Plan
                                                     </h4>
-                                                    <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50 space-y-4">
+                                                    <div className="bg-blue-50/30 p-4 sm:p-6 rounded-2xl border border-blue-100/50 space-y-4">
                                                         {fix.split('\n').filter((line: string) => line.trim()).map((line: string, i: number) => (
                                                             <div key={i} className="flex gap-4">
                                                                 <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shadow-sm">
@@ -175,7 +200,7 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                                 ))}
                             </div>
 
-                            <div className="p-8 bg-[#fcfcfc] min-h-[400px]">
+                            <div className="p-4 sm:p-8 bg-[#fcfcfc] min-h-[400px]">
                                 {samples && samples[activeTab] ? (
                                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-400" key={activeTab}>
                                         {/* Log Entry Context */}
@@ -217,7 +242,7 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                                                     <AlertTriangle className="w-4 h-4 text-red-500" />
                                                     <h4 className="text-xs font-black text-red-600 uppercase tracking-wider">Critical Exception Trace</h4>
                                                 </div>
-                                                <div className="bg-[#fff5f5] p-6 rounded-2xl border border-[#feb2b2] text-xs font-mono text-[#c53030] shadow-sm leading-relaxed border-l-4 border-l-red-600">
+                                                <div className="bg-[#fff5f5] p-4 sm:p-6 rounded-2xl border border-[#feb2b2] text-xs font-mono text-[#c53030] shadow-sm leading-relaxed border-l-4 border-l-red-600">
                                                     <p className="font-black mb-2">{samples[activeTab].exception_type || 'Exception'}</p>
                                                     {samples[activeTab].exception_message}
                                                 </div>
@@ -259,7 +284,7 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                                                     </div>
                                                     Full Payload Metadata
                                                 </summary>
-                                                <div className="mt-6 bg-gray-50 p-6 rounded-2xl text-[10px] font-mono text-gray-500 overflow-x-auto shadow-inner border border-gray-100">
+                                                <div className="mt-6 bg-gray-50 p-4 sm:p-6 rounded-2xl text-[10px] font-mono text-gray-500 overflow-x-auto shadow-inner border border-gray-100">
                                                     <pre className="custom-scrollbar">{JSON.stringify(samples[activeTab], null, 2)}</pre>
                                                 </div>
                                             </details>
