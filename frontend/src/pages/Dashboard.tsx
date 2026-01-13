@@ -198,7 +198,7 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Metrics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-4 gap-6">
                 {[
                     { label: 'Total Errors', value: metrics?.total_errors, color: 'bg-metrics-errors' },
                     { label: 'Unique Issues', value: metrics?.unique_issues, color: 'bg-metrics-unique' },
@@ -221,7 +221,7 @@ const Dashboard: React.FC = () => {
 
             {/* Main Data Table */}
             <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+                <div className="grid grid-cols-2 gap-8 px-2">
                     <div className="space-y-3">
                         <label className="text-sm font-bold text-[#31333f] ml-1">Filter by Status</label>
                         <div className="relative">
@@ -558,7 +558,7 @@ const Dashboard: React.FC = () => {
                     <span className="h-px bg-border flex-1"></span>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="grid grid-cols-2 gap-10">
                     <div className="bg-white p-10 rounded-[40px] border border-border shadow-xl overflow-hidden relative">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary-light/20 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
                         <h4 className="text-lg font-black text-text-primary mb-10 flex items-center space-x-2">

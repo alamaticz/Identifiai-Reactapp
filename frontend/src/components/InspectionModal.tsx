@@ -63,7 +63,7 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
     const displayRule = getDisplayRule(group);
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6 animate-in fade-in duration-200" onClick={onClose}>
             <div
                 className={cn(
                     "bg-[#f8f9fa] rounded-3xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300",
@@ -179,7 +179,7 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                                 {samples && samples[activeTab] ? (
                                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-400" key={activeTab}>
                                         {/* Log Entry Context */}
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-3 gap-6">
                                             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Timestamp</p>
                                                 <p className="text-sm font-bold text-[#0f172a]">{samples[activeTab].timestamp || 'N/A'}</p>
