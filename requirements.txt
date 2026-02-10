@@ -1,13 +1,30 @@
-streamlit>=1.30.0
+# FastAPI and Server Dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+python-multipart
+
+# Data Processing
 pandas>=2.0.0
-plotly>=5.18.0
 python-dotenv
+
+# OpenSearch
 opensearch-py==2.8.0
+
+# LangChain and AI
 langchain==0.3.27
 langchain-core>=0.3.76
 langchain-openai>=0.3.1
 langchain-community>=0.3.15
 langchain-mcp-adapters==0.1.11
+
+# Utilities
 nest_asyncio
 tqdm
+
+# Optional: Streamlit (if needed for other parts)
+streamlit>=1.30.0
+plotly>=5.18.0
+
+# MCP Server
 opensearch-mcp-server-py
