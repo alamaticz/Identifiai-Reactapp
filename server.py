@@ -11,6 +11,7 @@ import json
 import asyncio
 from datetime import datetime, timedelta
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 
 
 # Import existing modules
@@ -77,13 +78,14 @@ def get_metrics():
         last_week = now - timedelta(days=7)
         prev_week = now - timedelta(days=14)
 
-        # Total Errors
-        if client.indices.exists(index="pega-logs"):
-            count_res = client.count(body={"query": {"match": {"log.level": "ERROR"}}}, index="pega-logs")
-            metrics["total_errors"] = count_res["count"]
-            
-            # Change calculation
-            curr_count = client.count(index="pega-logs", body={
+        # Helper functions for parallel execution
+        def get_total_errors():
+            if not client.indices.exists(index="pega-logs"): return 0
+            return client.count(body={"query": {"match": {"log.level": "ERROR"}}}, index="pega-logs")["count"]
+
+        def get_error_change():
+            if not client.indices.exists(index="pega-logs"): return 0
+            curr = client.count(index="pega-logs", body={
                 "query": {
                     "bool": {
                         "must": [{"match": {"log.level": "ERROR"}}],
@@ -91,8 +93,7 @@ def get_metrics():
                     }
                 }
             })["count"]
-            
-            prev_count = client.count(index="pega-logs", body={
+            prev = client.count(index="pega-logs", body={
                 "query": {
                     "bool": {
                         "must": [{"match": {"log.level": "ERROR"}}],
@@ -100,72 +101,75 @@ def get_metrics():
                     }
                 }
             })["count"]
-            
-            if prev_count > 0:
-                metrics["total_errors_change"] = round(((curr_count - prev_count) / prev_count) * 100, 1)
-            else:
-                metrics["total_errors_change"] = 0
+            return round(((curr - prev) / prev) * 100, 1) if prev > 0 else 0
 
-            # Last Incident
-            last_res = client.search(index="pega-logs", body={
+        def get_last_incident():
+            if not client.indices.exists(index="pega-logs"): return "N/A"
+            res = client.search(index="pega-logs", body={
                 "size": 1, 
                 "sort": [{"ingestion_timestamp": "desc"}],
                 "query": {"match": {"log.level": "ERROR"}}
             })
-            if last_res['hits']['hits']:
-                ts = last_res['hits']['hits'][0]['_source'].get('ingestion_timestamp')
-                metrics["last_incident"] = ts 
-        
-        # Analysis Metrics
-        if client.indices.exists(index="pega-analysis-results"):
-            # Unique Issues
-            unique_res = client.count(index="pega-analysis-results")
-            metrics["unique_issues"] = unique_res["count"]
-            
-            # Change based on ingest_timestamp (assumed present or we use count)
-            # For simplicity let's compare total counts if time range isn't reliable on analysis results
-            # But usually analysis results have timestamps. Let's try range on last_seen or ingestion_timestamp
-            
-            curr_unique = client.count(index="pega-analysis-results", body={
+            if res['hits']['hits']:
+                return res['hits']['hits'][0]['_source'].get('ingestion_timestamp', "N/A")
+            return "N/A"
+
+        def get_unique_issues():
+            if not client.indices.exists(index="pega-analysis-results"): return 0
+            return client.count(index="pega-analysis-results")["count"]
+
+        def get_unique_change():
+            if not client.indices.exists(index="pega-analysis-results"): return 0
+            curr = client.count(index="pega-analysis-results", body={
                 "query": {"range": {"last_seen": {"gte": last_week.isoformat()}}}
             })["count"]
-            
-            prev_unique = client.count(index="pega-analysis-results", body={
+            prev = client.count(index="pega-analysis-results", body={
                 "query": {"range": {"last_seen": {"gte": prev_week.isoformat(), "lt": last_week.isoformat()}}}
             })["count"]
-            
-            if prev_unique > 0:
-                metrics["unique_issues_change"] = round(((curr_unique - prev_unique) / prev_unique) * 100, 1)
-            
-            # Pending Issues
-            pending_res = client.count(
+            return round(((curr - prev) / prev) * 100, 1) if prev > 0 else 0
+
+        def get_resolved_issues():
+            if not client.indices.exists(index="pega-analysis-results"): return 0
+            return client.count(
                 index="pega-analysis-results",
-                body={"query": {"term": {"diagnosis.status.keyword": "PENDING"}}}
-            )
-            metrics["pending_issues"] = pending_res["count"]
-            
-            # Resolved Issues (RESOLVED, FALSE POSITIVE, COMPLETED, IGNORE)
-            resolved_res = client.count(
-                index="pega-analysis-results",
-                body={"query": {"terms": {"diagnosis.status.keyword": ["RESOLVED", "FALSE POSITIVE", "COMPLETED", "IGNORE"]}}}
-            )
-            metrics["resolved_issues"] = resolved_res["count"]
-            
-            # Most Frequent (Parsed)
-            top_res = client.search(index="pega-analysis-results", body={
+                body={"query": {"terms": {"diagnosis.status.keyword": ["RESOLVED", "IGNORE"]}}}
+            )["count"]
+
+        def get_most_frequent():
+            if not client.indices.exists(index="pega-analysis-results"): return "N/A"
+            res = client.search(index="pega-analysis-results", body={
                 "size": 1,
                 "sort": [{"count": {"order": "desc"}}]
             })
-            if top_res['hits']['hits']:
-                 src = top_res['hits']['hits'][0]['_source']
-                 sig = src.get('group_signature', 'N/A')
-                 if len(sig) > 35:
-                     metrics["most_frequent"] = sig[:32] + "..."
-                 else:
-                     metrics["most_frequent"] = sig
+            if res['hits']['hits']:
+                sig = res['hits']['hits'][0]['_source'].get('group_signature', 'N/A')
+                return sig[:32] + "..." if len(sig) > 35 else sig
+            return "N/A"
+
+        # Execute in parallel using ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_total = executor.submit(get_total_errors)
+            future_err_change = executor.submit(get_error_change)
+            future_last = executor.submit(get_last_incident)
+            future_unique = executor.submit(get_unique_issues)
+            future_unique_change = executor.submit(get_unique_change)
+            future_resolved = executor.submit(get_resolved_issues)
+            future_most_freq = executor.submit(get_most_frequent)
+
+            metrics["total_errors"] = future_total.result()
+            metrics["total_errors_change"] = future_err_change.result()
+            metrics["last_incident"] = future_last.result()
+            metrics["unique_issues"] = future_unique.result()
+            metrics["unique_issues_change"] = future_unique_change.result()
+            metrics["resolved_issues"] = future_resolved.result()
+            metrics["most_frequent"] = future_most_freq.result()
+            
+            # Pending Issues calculation (Unique - Resolved)
+            metrics["pending_issues"] = metrics["unique_issues"] - metrics["resolved_issues"]
 
     except Exception as e:
         print(f"Metrics error: {e}")
+        traceback.print_exc()
     return metrics
 
 @app.get("/api/analytics/log-levels")
@@ -182,7 +186,7 @@ def get_log_levels():
 @app.get("/api/analytics/diagnosis-status")
 def get_diagnosis_status():
     if not client: return []
-    query = {"size": 0, "aggs": {"statuses": {"terms": {"field": "diagnosis.status", "size": 10}}}}
+    query = {"size": 0, "aggs": {"statuses": {"terms": {"field": "diagnosis.status.keyword", "size": 10}}}}
     try:
         res = client.search(body=query, index="pega-analysis-results")
         return res['aggregations']['statuses']['buckets']

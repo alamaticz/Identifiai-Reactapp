@@ -176,6 +176,7 @@ const Dashboard: React.FC = memo(() => {
     const [sortBy, setSortBy] = useState<string>("last_seen");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const [loading, setLoading] = useState(true);
+    const [tableLoading, setTableLoading] = useState(false);
     const [updating, setUpdating] = useState<string | null>(null);
     const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
     const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
@@ -212,8 +213,13 @@ const Dashboard: React.FC = memo(() => {
     // --- 1. Fetch Logs (Search, Sort, Filter, Page) ---
     const fetchLogs = useCallback(async (append = false, offset = 0) => {
         // Only show full-page loading if we have absolutely NO data (initial load)
-        const isInitialLoad = !append && (offset === 0);
-        if (isInitialLoad) setLoading(true);
+        const isInitialLoad = !append && (offset === 0) && !tableData.length && !metrics;
+        
+        if (isInitialLoad) {
+            setLoading(true);
+        } else if (!append) {
+             setTableLoading(true);
+        }
 
         try {
             const params = new URLSearchParams({
@@ -239,6 +245,7 @@ const Dashboard: React.FC = memo(() => {
             console.error("Fetch logs failed:", err);
         } finally {
             if (isInitialLoad) setLoading(false);
+            setTableLoading(false);
         }
     }, [searchTerm, sortBy, sortOrder, selectedStatuses, selectedTypes]);
 
@@ -428,6 +435,7 @@ const Dashboard: React.FC = memo(() => {
                 timezone={timezone}
                 setTimezone={setTimezone}
                 onHistoryOpen={() => setShowHistoryModal(true)}
+                loading={tableLoading}
                 cn={cn}
             />
 
@@ -836,6 +844,7 @@ interface LogTableSectionProps {
     timezone: 'IST' | 'PST';
     setTimezone: (tz: 'IST' | 'PST') => void;
     onHistoryOpen: () => void;
+    loading?: boolean;
     cn: (...inputs: any[]) => string;
 }
 
@@ -870,6 +879,7 @@ const LogTableSection = memo(({
     timezone,
     setTimezone,
     onHistoryOpen,
+    loading,
     cn
 }: LogTableSectionProps) => {
     const handleSort = (key: string) => {
@@ -1087,6 +1097,15 @@ const LogTableSection = memo(({
                         ))}
                     </tbody>
                 </table>
+                {/* Table Loading Overlay */}
+                {loading && (
+                     <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 h-full min-h-[200px]">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                            <span className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Updating Results...</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {
