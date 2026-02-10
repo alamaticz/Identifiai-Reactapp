@@ -11,8 +11,7 @@ import json
 import asyncio
 from datetime import datetime, timedelta
 import traceback
-import nest_asyncio
-nest_asyncio.apply()
+
 
 # Import existing modules
 import Analysis_Diagnosis
