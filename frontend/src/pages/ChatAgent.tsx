@@ -113,7 +113,7 @@ const ChatAgent: React.FC = memo(() => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="flex-1 flex flex-col items-center justify-center px-6 py-12"
+                        className="flex-1 flex flex-col items-center justify-center px-4 py-8 md:px-6 md:py-12"
                     >
                         {/* AI Orb Icon */}
                         <div className="relative mb-10">
@@ -143,7 +143,8 @@ const ChatAgent: React.FC = memo(() => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.2 }}
-                                className="text-4xl md:text-5xl font-black text-gray-800 tracking-tight"
+
+                                className="text-3xl md:text-5xl font-black text-gray-800 tracking-tight"
                             >
                                 {getGreeting()}, <span className="text-primary">{displayName}</span>
                             </motion.h1>
@@ -182,7 +183,7 @@ const ChatAgent: React.FC = memo(() => {
                         className="flex-1 flex flex-col h-full overflow-hidden"
                     >
                         {/* Chat Header */}
-                        <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white sticky top-0 z-20">
+                        <div className="p-4 md:p-6 border-b border-gray-50 flex items-center justify-between bg-white sticky top-0 z-20">
                             <div className="flex items-center gap-4">
                                 <button
                                     onClick={() => setMessages([])}
@@ -247,8 +248,8 @@ const ChatAgent: React.FC = memo(() => {
 
             {/* Input Box Area (Fixed at bottom) */}
             <div className={cn(
-                "w-full px-6 pb-8 pt-0",
-                messages.length > 0 ? "bg-white border-t border-gray-50 pt-6" : ""
+                "w-full px-4 pb-4 pt-0 md:px-6 md:pb-8",
+                messages.length > 0 ? "bg-white border-t border-gray-50 pt-4 md:pt-6" : ""
             )}>
                 <div className="relative max-w-2xl mx-auto group">
                     <input
@@ -268,12 +269,12 @@ const ChatAgent: React.FC = memo(() => {
                         }}
                         placeholder="Ask a question or make a request..."
                         className={cn(
-                            "w-full p-6 pr-24 bg-white border-2 border-gray-100 rounded-[32px] shadow-sm group-hover:shadow-md focus:shadow-xl focus:border-primary/20 outline-none transition-all resize-none text-gray-700 font-medium placeholder:text-gray-300 scrollbar-hide",
-                            messages.length > 0 ? "min-h-[80px]" : "min-h-[140px]"
+                            "w-full p-4 pr-16 md:p-6 md:pr-24 bg-white border-2 border-gray-100 rounded-[32px] shadow-sm group-hover:shadow-md focus:shadow-xl focus:border-primary/20 outline-none transition-all resize-none text-gray-700 font-medium placeholder:text-gray-300 scrollbar-hide",
+                            messages.length > 0 ? "min-h-[60px] md:min-h-[80px]" : "min-h-[100px] md:min-h-[140px]"
                         )}
                     />
 
-                    <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                    <div className="absolute bottom-3 right-3 md:bottom-4 md:right-4 flex items-center gap-2">
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             className="p-3 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all"
@@ -309,7 +310,7 @@ const ChatAgent: React.FC = memo(() => {
                     </motion.p>
                 )}
             </div>
-        </div>
+        </div >
     );
 });
 

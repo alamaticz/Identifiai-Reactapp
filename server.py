@@ -574,6 +574,8 @@ def extract_rules_endpoint(req: RuleExtractionRequest):
 # Chat
 class ChatRequest(BaseModel):
     message: str
+    group_id: Optional[str] = None
+    context: Optional[str] = None
 
 @app.get("/api/notifications/recent")
 async def get_recent_notifications():
@@ -650,10 +652,22 @@ async def get_recent_notifications():
 @app.post("/api/chat")
 async def chat_endpoint(req: ChatRequest):
     try:
-        executor = await chat_agent.initialize_agent_executor()
+        print(f"[DEBUG] Chat Request Received. Message: {req.message[:50]}...")
+        if req.group_id and req.context:
+            print(f"[DEBUG] Initializing Group Chat Agent. GroupID: {req.group_id}")
+            # Contextual Chat
+            executor = await chat_agent.initialize_group_chat_agent(req.group_id, req.context)
+        else:
+            print(f"[DEBUG] Initializing General Chat Agent.")
+            # General Chat
+            executor = await chat_agent.initialize_agent_executor()
+            
+        print(f"[DEBUG] Invoking Agent...")
         res = await executor.ainvoke({"input": req.message, "chat_history": []})
+        print(f"[DEBUG] Agent Response: {str(res['output'])[:50]}...")
         return {"response": res["output"]}
     except Exception as e:
+        print(f"[ERROR] Chat Endpoint Failed: {e}")
         traceback.print_exc()
         raise HTTPException(500, str(e))
 

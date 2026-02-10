@@ -197,10 +197,12 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
         setChatHistory(prev => [...prev, { role: 'user', content: message }]);
 
         try {
-            // Need to pass context? backend /api/chat is stateless in current server.py 
-            // but we can just send the message for now or update backend to handle context.
-            // server.py: chat_endpoint just uses ChatRequest(message)
-            const res = await axios.post(API_ENDPOINTS.CHAT, { message });
+            // Send context to backend for AI awareness
+            const res = await axios.post(API_ENDPOINTS.CHAT, {
+                message,
+                group_id: docId,
+                context: formattedContext
+            });
             setChatHistory(prev => [...prev, { role: 'assistant', content: res.data.response }]);
         } catch (_e) {
             console.error("Chat failed", _e);

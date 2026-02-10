@@ -214,11 +214,11 @@ const Dashboard: React.FC = memo(() => {
     const fetchLogs = useCallback(async (append = false, offset = 0) => {
         // Only show full-page loading if we have absolutely NO data (initial load)
         const isInitialLoad = !append && (offset === 0) && !tableData.length && !metrics;
-        
+
         if (isInitialLoad) {
             setLoading(true);
         } else if (!append) {
-             setTableLoading(true);
+            setTableLoading(true);
         }
 
         try {
@@ -534,7 +534,7 @@ const formatRelativeTime = (isoString: string) => {
 
 const DashboardHeader = memo(({ user, showNotifications, setShowNotifications, showSettings, setShowSettings, notifications }: DashboardHeaderProps) => {
     return (
-        <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-4 flex items-center justify-between gap-6 px-10">
+        <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-4 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-10">
             <div className="flex items-center gap-4">
                 <img src="/AlaLogo.png" alt="Alamaticz" className="h-10 w-10 object-contain" />
                 <div className="flex flex-col">
@@ -663,7 +663,7 @@ interface TemporalTrendsCardProps {
 }
 
 const TemporalTrendsCard = memo(({ data, startDate, setStartDate, endDate, setEndDate }: TemporalTrendsCardProps) => (
-    <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden">
+    <div className="bg-white p-4 md:p-10 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden">
         <div className="flex items-center justify-between mb-8">
             <h4 className="text-xl font-bold text-gray-800 flex items-center gap-3">
                 <Clock className="w-5 h-5 text-gray-400" />
@@ -745,56 +745,94 @@ interface DiagnosticAnalyticsCardProps {
     COLORS: string[];
 }
 
-const DiagnosticAnalyticsCard = memo(({ logLevels, diagnosisStatus, COLORS }: DiagnosticAnalyticsCardProps) => (
-    <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden">
-        <h4 className="text-xl font-bold text-gray-800 mb-10 flex items-center gap-3">
-            Diagnostic Analytics
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col items-center">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 text-center">Log level Distribution</p>
-                <div className="h-[220px] w-full relative" style={{ minHeight: '220px' }}>
-                    <ResponsiveContainer width="100%" height="100%" debounce={150}>
-                        <PieChart>
-                            <Pie data={logLevels} innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="doc_count" nameKey="key" stroke="none">
-                                {logLevels.map((_: any, index: number) => <Cell key={`c-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                            </Pie>
-                            <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-2xl font-black text-red-500">92%</span>
-                        <span className="text-[10px] font-bold text-gray-400">ERROR RATE</span>
+const DiagnosticAnalyticsCard = memo(({ logLevels, diagnosisStatus, COLORS }: DiagnosticAnalyticsCardProps) => {
+    // Calculate Error Rate
+    const errorRate = useMemo(() => {
+        if (!logLevels || logLevels.length === 0) return 0;
+        const total = logLevels.reduce((acc, curr) => acc + curr.doc_count, 0);
+        if (total === 0) return 0;
+        const errorCount = logLevels.find(l => l.key === 'ERROR')?.doc_count || 0;
+        return Math.round((errorCount / total) * 100);
+    }, [logLevels]);
+
+    // Calculate Completion Rate
+    const completionRate = useMemo(() => {
+        if (!diagnosisStatus || diagnosisStatus.length === 0) return 0;
+        const total = diagnosisStatus.reduce((acc, curr) => acc + curr.doc_count, 0);
+        if (total === 0) return 0;
+        const completedCount = diagnosisStatus
+            .filter(s => ['RESOLVED', 'COMPLETED', 'IGNORE', 'FALSE POSITIVE'].includes(s.key))
+            .reduce((acc, curr) => acc + curr.doc_count, 0);
+        return Math.round((completedCount / total) * 100);
+    }, [diagnosisStatus]);
+
+    return (
+        <div className="bg-white p-4 md:p-10 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden">
+            <h4 className="text-xl font-bold text-gray-800 mb-10 flex items-center gap-3">
+                Diagnostic Analytics
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="flex flex-col items-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 text-center">Log level Distribution</p>
+                    <div className="h-[220px] w-full relative" style={{ minHeight: '220px' }}>
+                        {logLevels && logLevels.length > 0 ? (
+                            <>
+                                <ResponsiveContainer width="100%" height="100%" debounce={150}>
+                                    <PieChart>
+                                        <Pie data={logLevels} innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="doc_count" nameKey="key" stroke="none">
+                                            {logLevels.map((_: any, index: number) => <Cell key={`c-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                        </Pie>
+                                        <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span className="text-2xl font-black text-red-500">{errorRate}%</span>
+                                    <span className="text-[10px] font-bold text-gray-400">ERROR RATE</span>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
+                                <span className="text-xs font-bold">No Data</span>
+                            </div>
+                        )}
                     </div>
                 </div>
-            </div>
-            <div className="flex flex-col items-center">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 text-center">Diagnosis Status Mapping</p>
-                <div className="h-[220px] w-full relative" style={{ minHeight: '220px' }}>
-                    <ResponsiveContainer width="100%" height="100%" debounce={150}>
-                        <PieChart>
-                            <Pie data={diagnosisStatus} innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="doc_count" nameKey="key" stroke="none">
-                                {diagnosisStatus.map((_: any, index: number) => <Cell key={`c2-${index}`} fill={COLORS[(index + 4) % COLORS.length]} />)}
-                            </Pie>
-                            <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-2xl font-black text-emerald-500">85%</span>
-                        <span className="text-[10px] font-bold text-gray-400">COMPLETED</span>
+                <div className="flex flex-col items-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 text-center">Diagnosis Status Mapping</p>
+                    <div className="h-[220px] w-full relative" style={{ minHeight: '220px' }}>
+                        {diagnosisStatus && diagnosisStatus.length > 0 ? (
+                            <>
+                                <ResponsiveContainer width="100%" height="100%" debounce={150}>
+                                    <PieChart>
+                                        <Pie data={diagnosisStatus} innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="doc_count" nameKey="key" stroke="none">
+                                            {diagnosisStatus.map((_: any, index: number) => <Cell key={`c2-${index}`} fill={COLORS[(index + 4) % COLORS.length]} />)}
+                                        </Pie>
+                                        <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span className="text-2xl font-black text-emerald-500">{completionRate}%</span>
+                                    <span className="text-[10px] font-bold text-gray-400">COMPLETED</span>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
+                                <span className="text-xs font-bold">No Data</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-));
+    );
+});
 
 interface ErrorGroupsBreakdownCardProps {
     topErrors: TopError[];
 }
 
 const ErrorGroupsBreakdownCard = memo(({ topErrors }: ErrorGroupsBreakdownCardProps) => (
-    <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden">
+    <div className="bg-white p-4 md:p-10 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden">
         <h4 className="text-xl font-bold text-gray-800 mb-10 flex items-center gap-3">
             <BarChartIcon className="w-5 h-5 text-gray-400" />
             Top Error Groups Breakdown
@@ -901,7 +939,7 @@ const LogTableSection = memo(({
 
     return (
         <div className="bg-white rounded-[40px] border border-gray-100 shadow-xl overflow-hidden mt-8">
-            <div className="p-8 border-b border-gray-50 space-y-6">
+            <div className="p-4 md:p-8 border-b border-gray-50 space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <h3 className="text-xl font-extrabold text-[#31333f]">Detailed Group Analysis</h3>
                     <div className="flex-1 max-w-3xl relative group">
@@ -1099,7 +1137,7 @@ const LogTableSection = memo(({
                 </table>
                 {/* Table Loading Overlay */}
                 {loading && (
-                     <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 h-full min-h-[200px]">
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 h-full min-h-[200px]">
                         <div className="flex flex-col items-center gap-3">
                             <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
                             <span className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Updating Results...</span>

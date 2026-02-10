@@ -88,16 +88,16 @@ const UploadLogs: React.FC = memo(() => {
     };
 
     return (
-        <div className="max-w-3xl mx-auto py-10 animate-in fade-in duration-500">
+        <div className="max-w-3xl mx-auto py-4 md:py-10 animate-in fade-in duration-500">
             {/* Main Upload Card */}
-            <div className="bg-white rounded-[32px] shadow-2xl border border-gray-100 p-10 relative">
+            <div className="bg-white rounded-[32px] shadow-2xl border border-gray-100 p-4 md:p-10 relative">
                 {/* Close button (mock) */}
                 <button className="absolute top-8 right-8 text-gray-400 hover:text-gray-600">
                     <X className="w-6 h-6" />
                 </button>
 
-                <div className="text-center mb-10">
-                    <h2 className="text-3xl font-black text-[#31333f] mb-2 tracking-tight">Upload and attach files</h2>
+                <div className="text-center mb-6 md:mb-10">
+                    <h2 className="text-2xl md:text-3xl font-black text-[#31333f] mb-2 tracking-tight">Upload and attach files</h2>
                     <p className="text-gray-400 font-medium text-sm">Attachments will be ingested into the analysis engine.</p>
                 </div>
 
@@ -107,7 +107,7 @@ const UploadLogs: React.FC = memo(() => {
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
                     className={cn(
-                        "relative border-2 border-dashed rounded-[24px] p-16 flex flex-col items-center justify-center transition-all duration-300",
+                        "relative border-2 border-dashed rounded-[24px] p-8 md:p-16 flex flex-col items-center justify-center transition-all duration-300",
                         isDragging ? "border-[#ee4a4a] bg-red-50/30" : "border-gray-200 bg-gray-50/20 hover:border-gray-300"
                     )}
                 >
@@ -188,10 +188,10 @@ const UploadLogs: React.FC = memo(() => {
                 )}
 
                 {/* Actions */}
-                <div className="mt-12 flex items-center justify-end space-x-4">
+                <div className="mt-6 md:mt-12 flex items-center justify-end space-x-4">
                     <button
                         onClick={() => setUploadingFiles([])}
-                        className="px-10 py-4 rounded-2xl text-sm font-black text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest border border-gray-100 hover:bg-gray-50"
+                        className="px-6 py-3 md:px-10 md:py-4 rounded-2xl text-sm font-black text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest border border-gray-100 hover:bg-gray-50"
                         disabled={isGlobalLoading}
                     >
                         Clear
@@ -199,7 +199,7 @@ const UploadLogs: React.FC = memo(() => {
                     <button
                         onClick={handleUploadAll}
                         disabled={isGlobalLoading || uploadingFiles.filter(f => f.status === 'pending').length === 0}
-                        className="px-10 py-4 rounded-2xl text-sm font-black text-white bg-gradient-to-r from-[#ee4a4a] to-[#d63a3a] shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest disabled:opacity-50 disabled:scale-100"
+                        className="px-6 py-3 md:px-10 md:py-4 rounded-2xl text-sm font-black text-white bg-gradient-to-r from-[#ee4a4a] to-[#d63a3a] shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest disabled:opacity-50 disabled:scale-100"
                     >
                         {isGlobalLoading ? (
                             <div className="flex items-center space-x-2">

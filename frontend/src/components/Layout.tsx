@@ -209,7 +209,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activePage, onPageChange, onL
                 "flex-1 overflow-y-auto relative bg-[#f8f9fa] transition-[margin-left] duration-300 ease-in-out pt-16 lg:pt-0 will-change-[margin-left] [transform:translate3d(0,0,0)]",
                 isSidebarOpen ? "lg:ml-[280px]" : "lg:ml-[80px]"
             )}>
-                <div className="p-6 sm:p-8 max-w-[1600px] mx-auto min-h-screen">
+                <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto min-h-screen">
                     <header className="mb-0 hidden lg:block">
                         {/* Optional breadcrumb or title here if needed */}
                     </header>

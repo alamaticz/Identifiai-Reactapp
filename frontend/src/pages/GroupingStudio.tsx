@@ -295,7 +295,7 @@ const GroupingStudio = memo(() => {
     };
 
     return (
-        <div className="p-6 space-y-8 animate-in fade-in duration-500 relative">
+        <div className="p-4 md:p-6 space-y-6 md:space-y-8 animate-in fade-in duration-500 relative">
 
             {/* Notifications */}
             {notification && (
@@ -322,12 +322,12 @@ const GroupingStudio = memo(() => {
             {/* 1. Filter Section */}
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div>
                             <CardTitle className="text-lg">1. Find Similar Groups</CardTitle>
                             <CardDescription>Select groups that represent the same issue but are split incorrectly.</CardDescription>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
                             <div className="flex bg-gray-50 border border-gray-100 rounded-xl p-1 shadow-sm">
                                 <button
                                     onClick={() => setTimezone('IST')}
@@ -499,9 +499,9 @@ const GroupingStudio = memo(() => {
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex justify-between items-center text-sm text-gray-500">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center text-sm text-gray-500 gap-4">
                         <span>{selectedIds.length} items selected</span>
-                        <Button onClick={generatePattern} disabled={selectedIds.length === 0 || isGenerating} className="gap-2">
+                        <Button onClick={generatePattern} disabled={selectedIds.length === 0 || isGenerating} className="gap-2 w-full md:w-auto">
                             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                             Generate Regex Pattern
                         </Button>
@@ -549,12 +549,12 @@ const GroupingStudio = memo(() => {
 
             {/* 3. Apply Section */}
             <div className="pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
                         <h3 className="text-lg font-medium text-gray-900">Apply Changes</h3>
                         <p className="text-sm text-gray-500">Reprocess all logs with the updated rule library. This mimics the "Run Grouping" action.</p>
                     </div>
-                    <Button size="lg" onClick={applyChanges} disabled={isApplying} className="bg-green-600 hover:bg-green-700 text-white gap-2">
+                    <Button size="lg" onClick={applyChanges} disabled={isApplying} className="bg-green-600 hover:bg-green-700 text-white gap-2 w-full md:w-auto">
                         {isApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                         Apply Rules Now
                     </Button>

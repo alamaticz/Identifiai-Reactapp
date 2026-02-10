@@ -51,7 +51,7 @@ pip install mcp-server-opensearch
 **Step 3: Run Server**
 Start the server in SSE mode (Server-Sent Events):
 ```powershell
-python -m mcp_server_opensearch --transport sse
+python -m mcp_server_opensearch --transport stream --port 9900
 ```
 *   **Note**: Keep this terminal window **open**. The Dashboard connects to this running process.
 
