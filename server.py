@@ -140,14 +140,14 @@ def get_metrics():
             # Pending Issues
             pending_res = client.count(
                 index="pega-analysis-results",
-                body={"query": {"term": {"diagnosis.status": "PENDING"}}}
+                body={"query": {"term": {"diagnosis.status.keyword": "PENDING"}}}
             )
             metrics["pending_issues"] = pending_res["count"]
             
             # Resolved Issues (RESOLVED, FALSE POSITIVE, COMPLETED, IGNORE)
             resolved_res = client.count(
                 index="pega-analysis-results",
-                body={"query": {"terms": {"diagnosis.status": ["RESOLVED", "FALSE POSITIVE", "COMPLETED", "IGNORE"]}}}
+                body={"query": {"terms": {"diagnosis.status.keyword": ["RESOLVED", "FALSE POSITIVE", "COMPLETED", "IGNORE"]}}}
             )
             metrics["resolved_issues"] = resolved_res["count"]
             
