@@ -30,11 +30,11 @@ const RuleSequenceViewer: React.FC<RuleSequenceViewerProps> = ({ signature }) =>
             const content = cleanPart.includes(':') ? cleanPart.split(':')[1] : cleanPart;
 
             const tokens = content.split('->');
-            if (tokens.length >= 3) {
+            if (tokens.length >= 2) {
                 return {
                     type: tokens[0].trim(),
                     name: tokens[1].trim(),
-                    class: tokens[2].trim()
+                    class: tokens[2]?.trim() || 'NA'
                 };
             }
             return null;
@@ -51,8 +51,8 @@ const RuleSequenceViewer: React.FC<RuleSequenceViewerProps> = ({ signature }) =>
     }
 
     return (
-        <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-x-auto">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 max-h-[400px] overflow-y-auto custom-scrollbar">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 sticky top-0 bg-slate-50 z-20 py-2">
                 <Layers className="w-4 h-4" /> Execution Path
             </h3>
 

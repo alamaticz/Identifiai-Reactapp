@@ -691,9 +691,9 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
 
                                     {/* Exception - Red Style */}
                                     {samples[activeTab].exception_message && samples[activeTab].exception_message !== 'N/A' && (
-                                        <div className="bg-red-50 p-4 rounded-xl border border-red-100 font-mono text-xs text-red-600 leading-relaxed shadow-sm flex gap-3">
+                                        <div className="bg-red-50 p-4 rounded-xl border border-red-100 font-mono text-xs text-red-600 leading-relaxed shadow-sm flex gap-3 overflow-hidden">
                                             <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                                            <div>
+                                            <div className="min-w-0 overflow-x-auto">
                                                 <p className="font-bold mb-1">Exception:</p>
                                                 {samples[activeTab].exception_message}
                                             </div>
