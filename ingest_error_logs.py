@@ -257,6 +257,50 @@ def extract_exception_info_from_log_entry(log_entry: Dict) -> Dict[str, str]:
         "normalized_message": normalized_message,
     }
 
+def extract_rule_info(stacktrace_line):
+    """
+    Extracts rule info from a stacktrace line using the pattern:
+    (ra_action_pzbiincrementalindexerusingqp_030a605c1a7e1bec48386d1e0152becf.java:222)
+    """
+    pattern = r'\((ra_[a-z0-9]+_[a-zA-Z0-9_]+)\.java:\d+\)'
+    match = re.search(pattern, stacktrace_line)
+    
+    if match:
+        full_class_name = match.group(1)
+        
+        # Remove hash suffix (32 chars hex usually)
+        # e.g. _030a605c1a7e1bec48386d1e0152becf
+        name_without_hash = re.sub(r'_[a-f0-9]{32}.*$', '', full_class_name)
+        # Also remove potential version suffixes like $2$1 if present (though robust regex handles most)
+        name_without_hash = re.sub(r'\$\d+.*$', '', name_without_hash)
+
+        parts = name_without_hash.split('_', 2)
+        if len(parts) >= 3:
+            prefix = parts[0] # ra
+            rule_type_code = parts[1] # action, stream, etc.
+            rule_name = parts[2] # pzbiincrementalindexerusingqp
+            
+            # Map type code to human readable type
+            type_map = {
+                'action': 'Activity',
+                'stream': 'Stream',
+                'model': 'Data Transform',
+                'section': 'Section',
+                'harness': 'Harness',
+                'flow': 'Flow',
+                'activity': 'Activity'
+            }
+            
+            rule_type = type_map.get(rule_type_code, rule_type_code.capitalize())
+            
+            return {
+                "class": full_class_name,
+                "type": rule_type,
+                "name": rule_name
+            }
+            
+    return None
+
 def extract_sequence_from_stack_trace(stack_trace: str) -> List[Dict[str, str]]:
     """Extract the sequence of generated classes from a stack trace."""
     sequence = []
@@ -303,6 +347,25 @@ def extract_sequence_from_stack_trace(stack_trace: str) -> List[Dict[str, str]]:
             parsed["LineNumber"] = line_num
             # original_line = lines[line_num - 1] if line_num <= len(lines) else match_text
             # parsed["OriginalLine"] = original_line.strip()
+            
+            # --- Enriched Logic (Add PegaRuleClass) ---
+            # Attempt to extract rule info from the same line or original line
+            # Often line from match_text is just 'com.pegarules.generated.activity.ra_action_... (ra_... .java:123)'
+            # If line has (ra_...), extract_rule_info will catch it.
+            
+            # Use original line if available for better context (stack trace snippet)
+            # but match_text is usually sufficient if it includes (file:line)
+            
+            # The regex for 'match_text' might not capture the (file:line) if it's strictly 'com....' ?
+            # Let's use the full line from lines list if index is valid
+            full_line_text = lines[line_num - 1] if line_num <= len(lines) else match_text
+            
+            rule_info = extract_rule_info(full_line_text)
+            if rule_info:
+                parsed["PegaRuleClass"] = rule_info["class"]
+            else:
+                parsed["PegaRuleClass"] = "NA"
+            
             sequence.append(parsed)
             
     if not sequence:
@@ -316,6 +379,13 @@ def extract_sequence_from_stack_trace(stack_trace: str) -> List[Dict[str, str]]:
                 sequence_order += 1
                 parsed["SequenceOrder"] = sequence_order
                 parsed["LineNumber"] = line_num
+                
+                rule_info = extract_rule_info(line)
+                if rule_info:
+                    parsed["PegaRuleClass"] = rule_info["class"]
+                else:
+                    parsed["PegaRuleClass"] = "NA"
+                
                 sequence.append(parsed)
                 
     return sequence
@@ -397,13 +467,6 @@ def ingest_log_stream(file_name: str, line_iterator):
                     continue
 
                 try:
-                    # --- FAST FILTER (Pre-JSON) ---
-                    # Skips json.loads for 99% of logs (non-errors)
-                    if "ERROR" not in line and "exception" not in line and "FATAL" not in line and "FAIL" not in line:
-                         skipped_safe += 1
-                         continue
-                    # ------------------------------
-
                     log_entry = json.loads(line)
                     
                     extracted_ts = log_entry.get("@timestamp") or log_entry.get("log", {}).get("timestamp")
@@ -414,14 +477,13 @@ def ingest_log_stream(file_name: str, line_iterator):
 
                     stack_trace = extract_stacktrace_from_log_entry(log_entry)
                     
-                    # Log Level Check (fallback)
+                    # Log Level Check (strict)
                     log_lvl = log_entry.get("level") or log_entry.get("log", {}).get("level") or ""
                     log_lvl = str(log_lvl).upper()
                     
                     is_error = "ERROR" in log_lvl or "FATAL" in log_lvl or "FAIL" in log_lvl
-                    has_exception = stack_trace is not None or "exception" in log_entry.get("log", {})
                     
-                    if not (is_error or has_exception):
+                    if not is_error:
                         skipped_safe += 1
                         continue 
 
@@ -442,7 +504,7 @@ def ingest_log_stream(file_name: str, line_iterator):
                         # Collapse sequence mapping into one string
                         parts = []
                         for item in extraction_sequence:
-                             val = f"{item['TypeOfTheRule']}->{item['RuleGenerated']}->{item['FunctionInvoked']}->{item['ClassGenerated']}"
+                             val = f"{item['TypeOfTheRule']}->{item['RuleGenerated']}->{item['FunctionInvoked']}->{item['ClassGenerated']}->{item.get('PegaRuleClass', 'NA')}"
                              parts.append(f"{item['SequenceOrder']}:{val}")
                         sequence_summary_str = " | ".join(parts)
 

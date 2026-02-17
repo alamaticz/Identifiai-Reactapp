@@ -45,4 +45,5 @@ export const API_ENDPOINTS = {
     STATUS_OPTIONS: buildApiUrl('/api/status-options'),
     TYPE_OPTIONS: buildApiUrl('/api/type-options'),
     RECENT_NOTIFICATIONS: buildApiUrl('/api/notifications/recent'),
+    PEGA_SEND: buildApiUrl('/api/pega/send'),
 };

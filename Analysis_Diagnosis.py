@@ -12,7 +12,110 @@ from dotenv import load_dotenv
 
 # Load envs
 # Load envs
+
 load_dotenv()
+
+DEFAULT_PROMPT_TEMPLATE = '''You are a Senior Pega Lead System Architect (LSA) and low-level Pega engine expert specializing in clipboard internals, activity execution, data transforms, and JSON/page conversion functions.
+
+I will provide error-group data, rule definitions, activities, data transforms, Java steps, and logs from a Pega system.
+
+DATA PROVIDED:
+{context_str}
+
+Your task is NOT to produce a generic incident report.
+
+Your task is to perform deep technical forensic analysis and identify the exact failure point at rule/activity/property/function level.
+
+You must determine precisely:
+
+WHERE THE ERROR OCCURS
+
+Identify the exact activity name
+
+Identify the exact step (Step number, method name such as Property-Set, Page-Copy, Apply-DataTransform, Java step, etc.)
+
+Identify the exact function or API causing the failure (example: pxConvertPageToStringWithZone, pxConvertStringToPage, Property-Set, Page-Copy, etc.)
+
+Identify the exact clipboard page and property involved
+
+Identify the exact rule, data transform, or Java logic involved
+
+WHY THE ERROR OCCURS
+
+Explain the precise technical cause at clipboard/property structure level
+
+Identify invalid page structure, missing property definition, null PageList entries, class mismatch, or invalid JSON conversion if applicable
+
+Explain what condition causes the failure inside Pega engine internals
+
+Reference specific properties, PageLists, or conversion functions causing failure
+
+TRACE THE COMPLETE FAILURE FLOW
+Show step-by-step execution flow like:
+
+Activity → Step → Function → Clipboard Page → Property → Failure
+
+IDENTIFY THE EXACT FAULTY CODE OR STEP
+Quote the exact failing line or step from activity, Java code, or data transform.
+
+PROVIDE EXACT RESOLUTION STEPS
+Provide specific, implementable fixes such as:
+
+exact activity step to modify
+
+exact function replacement
+
+exact code fix
+
+exact guard condition to add
+
+exact data transform fix
+
+exact property/class correction
+
+DO NOT GIVE GENERIC STATEMENTS
+DO NOT say:
+
+"data mapping issue"
+
+"configuration issue"
+
+"needs investigation"
+
+Instead say exactly:
+
+which property
+
+which page
+
+which function
+
+which activity step
+
+which rule
+
+OUTPUT FORMAT (STRICT)
+
+Return answer in this exact structure:
+
+ERROR LOCATION
+(detailed precise location)
+
+ROOT CAUSE
+(technical clipboard-level explanation)
+
+FAILURE FLOW
+(step-by-step execution path)
+
+FAULTY STEP OR CODE
+(exact activity step, Java code, or function)
+
+RESOLUTION
+(exact fix with step-by-step instructions)
+
+PREVENTION
+(optional guardrails to prevent recurrence)
+"Assume you have full knowledge of Pega clipboard internals, activity execution engine, and JSON conversion functions. Your answer must identify the exact failing function and property."'''
 
 def clean_markdown(text):
     """
@@ -123,19 +226,18 @@ def update_diagnosis_in_opensearch(client, doc_id, diagnosis_text, token_usage=N
 
 
 
-def construct_analysis_context(group_doc):
+def construct_analysis_context(group_doc, pega_api_response=None):
     """
     Helper to construct the analysis context dictionary from a group document.
+    Returns the full group document to ensure all fields (including rules) are available to the LLM.
+    Optionally includes Pega API response if available.
     """
-    return {
-        "group_signature": group_doc.get('group_signature'),
-        "group_type": group_doc.get('group_type'),
-        "total_count": group_doc.get('count'),
-        "representative_log": group_doc.get('representative_log'),
-        "signature_details": group_doc.get('signature_details'),
-        "exception_signatures": group_doc.get('exception_signatures', []),
-        "message_signatures": group_doc.get('message_signatures', [])
-    }
+    context = group_doc.copy()
+    
+    if pega_api_response:
+        context['pega_api_insights'] = pega_api_response
+    
+    return context
 
 async def execute_diagnosis(agent, prompt):
     """
@@ -160,7 +262,7 @@ async def execute_diagnosis(agent, prompt):
         print(f"Failed to execute diagnosis: {exc}")
         return None, None
 
-async def diagnose_single_group(client, group_id, prompt_template=None):
+async def diagnose_single_group(client, group_id, prompt_template=None, pega_api_response=None):
     """
     Standalone function to diagnose a single group by ID.
     Used by the Dashboard for on-demand analysis.
@@ -172,7 +274,7 @@ async def diagnose_single_group(client, group_id, prompt_template=None):
              return "Group not found or deleted.", {}
         
         source = group_doc['_source']
-        analysis_context = construct_analysis_context(source)
+        analysis_context = construct_analysis_context(source, pega_api_response)
         context_str = json.dumps(analysis_context, indent=2)
 
         # 2. Setup Agent (Re-using logic from main flow, could be optimized to pass agent in)
@@ -198,62 +300,7 @@ async def diagnose_single_group(client, group_id, prompt_template=None):
         # 3. Construct Prompt
         if not prompt_template:
             # Default Prompt
-            prompt = f'''You are a Senior Pega Lead System Architect (LSA). I will provide one or more error-group datasets (logs, aggregated error groups from Pega SmartBPM/PRPC, alert events, stack traces, rule/activity/flow names, node/environment, timestamps, counts, correlation IDs, related metrics).
-
-            Data Provided:
-            {context_str}
-
-            Analyze the input and produce a technical incident report in CLEAN PLAIN TEXT only (no markdown, no HTML, no extra formatting). The report must contain exactly and only the following sections, in this order, as top-level headings (uppercase): EXECUTIVE SUMMARY, SEVERITY, ERROR FLOW, ROOT CAUSE, IMPACT, RESOLUTION.
-            
-            Think step by step. For each section, include the items requested below. Keep wording concise, factual, and actionable. Do not add extra sections or explanatory preamble. If data is missing, call it out under the appropriate section as an information gap and state what is needed to conclude.
-            
-            Required content for each section:
-            
-            1. EXECUTIVE SUMMARY
-            
-            - One-paragraph (2–4 sentences) high-level summary of what the error group is, scope (number of affected cases/transactions/sessions), time window, and immediate operational status (ongoing, mitigated, resolved, intermittent).
-            - One-line recommended next immediate action (example: "apply mitigation X", "rollback changes", "scale nodes", "open CR").
-            
-            2. SEVERITY
-            
-            - A short classification: Critical / High / Medium / Low and a justification (one sentence) referencing impact drivers (customer-facing downtime, SLA breach, data loss, number of users/cases).
-            - Quantitative indicators: total occurrences, percentage of total errors (if known), peak error rate (errors/min or errors/hour), number of unique flows/rulesets/nodes impacted, and time range of observations.
-            - Confidence level for severity assignment (High/Medium/Low) and why.
-            
-            3. ERROR FLOW
-            
-            - A concise narrative of the observed error path: originating entry point (REST/API/Queue/Agent/UI), Pega flow/case type and flow shape where error appears, activities/services/rules involved, downstream systems called (HTTP, DB, JMS) and where failure manifests.
-            - Timeline or sequence of notable events (timestamped or relative): first occurrence, peak, latest occurrence, any correlated deploys/config changes/maintenance windows.
-            - Top 3 most frequent error messages or exception types and representative sample (error code/message, count).
-            - Correlation identifiers or example log lines (one or two) that tie transactions to the error group (include correlation ID, case ID, node if available).
-            
-            4. ROOT CAUSE
-            
-            - Clear statement of the most likely root cause with evidence: configuration change, code/regression, data issue, external dependency, resource exhaustion, concurrency/deadlock, misrouted flow, rule resolution error, etc.
-            - Contributing factors and why they increase likelihood (race condition, missing guardrails, high load, old ruleset version).
-            - Reproducibility: steps to reproduce (if known and deterministic) or conditions required to reproduce.
-            - If uncertain, list alternate hypotheses with brief rationale and what data would confirm each.
-            
-            5. IMPACT
-            
-            - Precise operational impact: number of customers/cases affected, SLA violations and count, business functions impacted, data integrity risk (yes/no), security risk (yes/no).
-            - Short-term operational risk if left unaddressed (worsening error rate, data corruption, system instability).
-            - Estimated exposure/time-to-failure if trend continues (example: error rate doubling in X hours; queue backlog will reach Y in Z hours).
-            
-            6. RESOLUTION
-            
-            - Immediate mitigations (short-term fixes) to stop or reduce impact, with step-by-step actions and safe rollback notes. Include command/config change examples or Pega admin actions where applicable (e.g., patch activity, change rule resolution to previous ruleset, disable agent, increase thread pool, scale-out service).
-            - Recommended permanent fix(es) with implementation approach, required code/config changes, owner role (e.g., LSA, SRE, Integration team), estimated effort (S, M, L — hours/days), and priority.
-            - Verification steps and monitoring: how to validate resolution (tests, queries, sample transactions), success criteria, and metrics to monitor post-fix (error rate, queue depth, CPU).
-            - Post-mortem artefacts to produce (root cause ticket, RCA doc, regression test cases) and suggested timeline for completion.
-            
-            Formatting and tone rules
-            
-            - Use plain text only. Headings must be the exact uppercase words specified followed by a blank line and then the content.
-            - Use short paragraphs and bullet-style lists where useful, but keep the content compact and actionable.
-            - Include explicit evidence references (counts, timestamps, log snippets) from the provided data when drawing conclusions.
-            - If data is insufficient for any conclusion, explicitly state what is missing and why it matters.
-            '''
+            prompt = DEFAULT_PROMPT_TEMPLATE.format(context_str=context_str)
         else:
             # Inject context into user provided template if placeholder exists, else append
             if "{context_str}" in prompt_template:
@@ -330,62 +377,7 @@ async def run_diagnosis_workflow():
             print(f"Diagnosing Group: {group_doc.get('group_signature')} (Count: {group_doc.get('count')})")
 
             # Define Prompt
-            prompt = f'''You are a Senior Pega Lead System Architect (LSA). I will provide one or more error-group datasets (logs, aggregated error groups from Pega SmartBPM/PRPC, alert events, stack traces, rule/activity/flow names, node/environment, timestamps, counts, correlation IDs, related metrics).
-
-            Data Provided:
-            {context_str}
-
-            Analyze the input and produce a technical incident report in CLEAN PLAIN TEXT only (no markdown, no HTML, no extra formatting). The report must contain exactly and only the following sections, in this order, as top-level headings (uppercase): EXECUTIVE SUMMARY, SEVERITY, ERROR FLOW, ROOT CAUSE, IMPACT, RESOLUTION.
-            
-            Think step by step. For each section, include the items requested below. Keep wording concise, factual, and actionable. Do not add extra sections or explanatory preamble. If data is missing, call it out under the appropriate section as an information gap and state what is needed to conclude.
-            
-            Required content for each section:
-            
-            1. EXECUTIVE SUMMARY
-            
-            - One-paragraph (2–4 sentences) high-level summary of what the error group is, scope (number of affected cases/transactions/sessions), time window, and immediate operational status (ongoing, mitigated, resolved, intermittent).
-            - One-line recommended next immediate action (example: "apply mitigation X", "rollback changes", "scale nodes", "open CR").
-            
-            2. SEVERITY
-            
-            - A short classification: Critical / High / Medium / Low and a justification (one sentence) referencing impact drivers (customer-facing downtime, SLA breach, data loss, number of users/cases).
-            - Quantitative indicators: total occurrences, percentage of total errors (if known), peak error rate (errors/min or errors/hour), number of unique flows/rulesets/nodes impacted, and time range of observations.
-            - Confidence level for severity assignment (High/Medium/Low) and why.
-            
-            3. ERROR FLOW
-            
-            - A concise narrative of the observed error path: originating entry point (REST/API/Queue/Agent/UI), Pega flow/case type and flow shape where error appears, activities/services/rules involved, downstream systems called (HTTP, DB, JMS) and where failure manifests.
-            - Timeline or sequence of notable events (timestamped or relative): first occurrence, peak, latest occurrence, any correlated deploys/config changes/maintenance windows.
-            - Top 3 most frequent error messages or exception types and representative sample (error code/message, count).
-            - Correlation identifiers or example log lines (one or two) that tie transactions to the error group (include correlation ID, case ID, node if available).
-            
-            4. ROOT CAUSE
-            
-            - Clear statement of the most likely root cause with evidence: configuration change, code/regression, data issue, external dependency, resource exhaustion, concurrency/deadlock, misrouted flow, rule resolution error, etc.
-            - Contributing factors and why they increase likelihood (race condition, missing guardrails, high load, old ruleset version).
-            - Reproducibility: steps to reproduce (if known and deterministic) or conditions required to reproduce.
-            - If uncertain, list alternate hypotheses with brief rationale and what data would confirm each.
-            
-            5. IMPACT
-            
-            - Precise operational impact: number of customers/cases affected, SLA violations and count, business functions impacted, data integrity risk (yes/no), security risk (yes/no).
-            - Short-term operational risk if left unaddressed (worsening error rate, data corruption, system instability).
-            - Estimated exposure/time-to-failure if trend continues (example: error rate doubling in X hours; queue backlog will reach Y in Z hours).
-            
-            6. RESOLUTION
-            
-            - Immediate mitigations (short-term fixes) to stop or reduce impact, with step-by-step actions and safe rollback notes. Include command/config change examples or Pega admin actions where applicable (e.g., patch activity, change rule resolution to previous ruleset, disable agent, increase thread pool, scale-out service).
-            - Recommended permanent fix(es) with implementation approach, required code/config changes, owner role (e.g., LSA, SRE, Integration team), estimated effort (S, M, L — hours/days), and priority.
-            - Verification steps and monitoring: how to validate resolution (tests, queries, sample transactions), success criteria, and metrics to monitor post-fix (error rate, queue depth, CPU).
-            - Post-mortem artefacts to produce (root cause ticket, RCA doc, regression test cases) and suggested timeline for completion.
-            
-            Formatting and tone rules
-            
-            - Use plain text only. Headings must be the exact uppercase words specified followed by a blank line and then the content.
-            - Use short paragraphs and bullet-style lists where useful, but keep the content compact and actionable.
-            - Include explicit evidence references (counts, timestamps, log snippets) from the provided data when drawing conclusions.
-            - If data is insufficient for any conclusion, explicitly state what is missing and why it matters.
-            '''
+            prompt = DEFAULT_PROMPT_TEMPLATE.format(context_str=context_str)
 
             # Invoke Agent
             diagnosis_text, token_usage = await execute_diagnosis(agent, prompt)

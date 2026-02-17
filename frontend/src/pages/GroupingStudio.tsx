@@ -473,7 +473,7 @@ const GroupingStudio = memo(() => {
                                                     }}
                                                     className="bg-white border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
                                                 >
-                                                    {["PENDING", "IN PROCESS", "RESOLVED", "FALSE POSITIVE", "IGNORE", "COMPLETED"].map(opt => (
+                                                    {["PENDING", "IN PROCESS", "RESOLVED", "IGNORE", "DIAGNOSIS COMPLETED"].map(opt => (
                                                         <option key={opt} value={opt}>{opt}</option>
                                                     ))}
                                                 </select>

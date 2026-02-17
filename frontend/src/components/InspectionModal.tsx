@@ -73,7 +73,9 @@ interface LogGroupData {
     };
     representative_log?: {
         message: string;
+        [key: string]: any;
     };
+    rules?: { class: string;[key: string]: any }[];
     comments?: string;
     [key: string]: unknown;
 }
@@ -114,6 +116,11 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
     const [chatHistory, setChatHistory] = useState<{ role: string, content: string }[]>([
         { role: 'assistant', content: 'Hello! I have the context for this error group. You can ask me to explain the error or ask me to **update the analysis result** based on new information.' }
     ]);
+
+    // Pega API State
+    const [pegaApiResponse, setPegaApiResponse] = useState<any>(null);
+    const [sendingToPega, setSendingToPega] = useState(false);
+    const [showPegaPayload, setShowPegaPayload] = useState(false);
 
     // Sample Logs Tab
     const [activeTab, setActiveTab] = useState(0);
@@ -170,10 +177,39 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
         }
     };
 
+    const handleSendToPega = async () => {
+        if (!data?.group) return;
+        setSendingToPega(true);
+        try {
+            const payload = {
+                "request_Post": [
+                    {
+                        "group_signature": data.group.group_signature,
+                        "group_type": data.group.group_type,
+                        "representative_log": data.group.representative_log,
+                        "rules": data.group['rules'] || []
+                    }
+                ]
+            };
+
+            const res = await axios.post(API_ENDPOINTS.PEGA_SEND, { payload });
+            setPegaApiResponse(res.data);
+            alert("Successfully sent to Pega API!");
+        } catch (err) {
+            console.error("Failed to send to Pega", err);
+            alert("Failed to send to Pega API");
+        } finally {
+            setSendingToPega(false);
+        }
+    };
+
     const runDiagnosis = async () => {
         setRunningDiagnosis(true);
         try {
-            const res = await axios.post(API_ENDPOINTS.DIAGNOSE_SINGLE(docId));
+            // Include Pega Response if available
+            const body = pegaApiResponse ? { pega_api_response: pegaApiResponse } : {};
+            const res = await axios.post(API_ENDPOINTS.DIAGNOSE_SINGLE(docId), body);
+
             if (res.data.success) {
                 const refresh = await axios.get(API_ENDPOINTS.LOG_GROUP(docId));
                 setData(refresh.data);
@@ -307,7 +343,20 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                             <div>
                                 <h3 className="text-xs font-bold text-gray-900 uppercase mb-1">Rule/Message:</h3>
                                 <p className="text-sm font-medium text-gray-600 break-words font-mono bg-gray-50 p-2 rounded border border-gray-200">
-                                    {group.representative_log?.message || group.group_signature?.split('->')[1] || 'N/A'}
+                                    {(() => {
+                                        if (group.group_type === 'RuleSequence') {
+                                            const firstPart = group.group_signature.split('|')[0].trim();
+                                            const tokens = firstPart.split('->');
+                                            // Handle "1:Type->Name->Class" or "Type->Name->Class"
+                                            // Backend logic often picks index 1 if formatted with index prefix
+                                            // But let's be safe. If it starts with a number/index, split by ':' first?
+                                            // Actually, simplest is just checking if we can find a plausible rule name.
+                                            // If standard format "Type->Name->Class", index 1 is Name.
+                                            // If "1:Type->Name->Class", split('->') gives ["1:Type", "Name", "Class"] -> Index 1 is Name.
+                                            return tokens.length >= 2 ? tokens[1] : 'N/A';
+                                        }
+                                        return group.representative_log?.['logger_name'] || 'N/A';
+                                    })()}
                                 </p>
                             </div>
 
@@ -336,6 +385,30 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                             </div>
                         </div>
 
+
+                        {/* Rules Display */}
+                        {/* Rules Display */}
+                        {group.rules && Array.isArray(group.rules) && group.rules.length > 0 && (
+                            <div>
+                                <h3 className="text-xs font-bold text-gray-900 uppercase mb-2">Rule Sequence:</h3>
+                                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden text-xs">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50 text-gray-500 font-medium">
+                                            <tr>
+                                                <th className="px-3 py-2">Class</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {group.rules.map((r, i) => (
+                                                <tr key={i} className="hover:bg-gray-50">
+                                                    <td className="px-3 py-2 font-mono text-blue-600 truncate max-w-[200px]" title={r.class}>{r.class}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Right: Count & Status */}
                         <div className="space-y-6">
@@ -426,101 +499,160 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ docId, onClose }) => 
                         </button>
                     </div>
 
-                    {/* Report Content */}
-                    {diagnosisReport ? (
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-8">
-                            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-gray-500" />
-                                <h3 className="text-sm font-bold text-gray-700">Diagnosis Report</h3>
+                    {/* Pega API Section */}
+                    <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6 mb-8">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">🔗</span>
+                                <h3 className="text-lg font-bold text-gray-800">Pega API Integration</h3>
                             </div>
-                            <div className="p-6 md:p-8 space-y-8">
-                                {parsedReport.map((section, idx) => (
-                                    <div key={idx} className="space-y-2">
-                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{section.label}</h4>
-                                        <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
-                                            {section.content}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="bg-gray-50 rounded-2xl border border-dashed border-gray-200 p-8 text-center mb-8">
-                            <p className="text-gray-400 font-medium text-sm">No diagnosis report generated yet.</p>
-                        </div>
-                    )}
+                            <button
+                                onClick={handleSendToPega}
+                                disabled={sendingToPega}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {sendingToPega ? <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <Rocket className="w-3 h-3" />}
+                                Send to Pega API
+                            </button>
 
-                    {/* TWO-COLUMN BOTTOM: User Comments & AI Assistant */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
 
-                        {/* User Comments Section */}
-                        <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm h-full flex flex-col">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-black text-[#0f172a] uppercase tracking-wider flex items-center gap-2">
-                                    <span className="text-lg">💬</span> User Comments
-                                </h3>
-                                {isSavingComments && <span className="text-xs text-gray-400 animate-pulse">Saving...</span>}
-                            </div>
-                            <textarea
-                                className="w-full flex-1 min-h-[150px] p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none font-medium mb-3"
-                                placeholder="Add notes or implementation details..."
-                                value={comments}
-                                onChange={(e) => setComments(e.target.value)}
-                            />
-                            <div className="flex justify-start">
+                            {/* View Payload Accordion */}
+                            <div className="mb-4 border border-gray-200 rounded-xl bg-white overflow-hidden">
                                 <button
-                                    onClick={saveComments}
-                                    disabled={isSavingComments}
-                                    className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-black transition-colors disabled:opacity-50 flex items-center gap-2"
+                                    onClick={() => setShowPegaPayload(!showPegaPayload)}
+                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
                                 >
-                                    <span className="text-lg">💾</span> Save Comments
+                                    {showPegaPayload ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                                    <span className="text-sm font-medium text-gray-600">View Payload to be Sent</span>
                                 </button>
+                                {showPegaPayload && (
+                                    <div className="p-4 bg-gray-50 border-t border-gray-100">
+                                        <pre className="text-[10px] font-mono text-gray-600 max-h-60 overflow-y-auto custom-scrollbar">
+                                            {JSON.stringify({
+                                                "request_Post": [
+                                                    {
+                                                        "group_signature": group.group_signature,
+                                                        "group_type": group.group_type,
+                                                        "representative_log": group.representative_log || {},
+                                                        "rules": group.rules || []
+                                                    }
+                                                ]
+                                            }, null, 2)}
+                                        </pre>
+                                    </div>
+                                )}
                             </div>
+
+                            {pegaApiResponse && (
+                                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h4 className="text-xs font-bold text-green-600 uppercase">Response Received</h4>
+                                        <span className="text-[10px] text-gray-400">Included in analysis context</span>
+                                    </div>
+                                    <pre className="text-[10px] font-mono text-gray-600 max-h-40 overflow-y-auto custom-scrollbar">
+                                        {JSON.stringify(pegaApiResponse, null, 2)}
+                                    </pre>
+                                </div>
+                            )}
                         </div>
 
-                        {/* AI Group Assistant (Chat) using Comments as workaround */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[350px]">
-                            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2 bg-gray-50">
-                                <Bot className="w-5 h-5 text-green-500" />
-                                <h3 className="text-sm font-bold text-gray-700">AI Group Assistant</h3>
-                            </div>
-
-                            <div className="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-6">
-                                {chatHistory.map((msg, idx) => (
-                                    <div key={idx} className={cn("flex gap-4", msg.role === 'user' && "flex-row-reverse")}>
-                                        <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", msg.role === 'assistant' ? "bg-orange-100" : "bg-blue-100")}>
-                                            {msg.role === 'assistant' ? <Bot className="w-5 h-5 text-orange-500" /> : <User className="w-5 h-5 text-blue-600" />}
-                                        </div>
-                                        <div className={cn("space-y-1", msg.role === 'user' && "text-right")}>
-                                            <p className="text-xs font-bold text-gray-400">{msg.role === 'assistant' ? 'Assistant' : 'You'}</p>
-                                            <div className={cn("p-4 rounded-2xl text-sm leading-relaxed shadow-sm block", msg.role === 'assistant' ? "bg-gray-50 text-gray-700 rounded-tl-none" : "bg-blue-600 text-white rounded-tr-none text-left")}>
-                                                {msg.content}
+                        {/* Report Content */}
+                        {diagnosisReport ? (
+                            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-8">
+                                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-gray-500" />
+                                    <h3 className="text-sm font-bold text-gray-700">Diagnosis Report</h3>
+                                </div>
+                                <div className="p-6 md:p-8 space-y-8">
+                                    {parsedReport.map((section, idx) => (
+                                        <div key={idx} className="space-y-2">
+                                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{section.label}</h4>
+                                            <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
+                                                {section.content}
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                            <div className="p-4 border-t border-gray-100 bg-gray-50/50">
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        value={chatInput}
-                                        onChange={(e) => setChatInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
-                                        placeholder="Ask the AI Assistant..."
-                                        disabled={isChatting}
-                                        className="w-full pl-4 pr-14 py-3 rounded-xl border-none shadow-sm bg-gray-100 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400 disabled:opacity-50"
-                                    />
+                        ) : (
+                            <div className="bg-gray-50 rounded-2xl border border-dashed border-gray-200 p-8 text-center mb-8">
+                                <p className="text-gray-400 font-medium text-sm">No diagnosis report generated yet.</p>
+                            </div>
+                        )}
+
+                        {/* TWO-COLUMN BOTTOM: User Comments & AI Assistant */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+
+                            {/* User Comments Section */}
+                            <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm h-full flex flex-col">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-black text-[#0f172a] uppercase tracking-wider flex items-center gap-2">
+                                        <span className="text-lg">💬</span> User Comments
+                                    </h3>
+                                    {isSavingComments && <span className="text-xs text-gray-400 animate-pulse">Saving...</span>}
+                                </div>
+                                <textarea
+                                    className="w-full flex-1 min-h-[150px] p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none font-medium mb-3"
+                                    placeholder="Add notes or implementation details..."
+                                    value={comments}
+                                    onChange={(e) => setComments(e.target.value)}
+                                />
+                                <div className="flex justify-start">
                                     <button
-                                        onClick={handleChatSubmit}
-                                        disabled={!chatInput.trim() || isChatting}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white rounded-lg shadow-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50 transition-all"
+                                        onClick={saveComments}
+                                        disabled={isSavingComments}
+                                        className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-black transition-colors disabled:opacity-50 flex items-center gap-2"
                                     >
-                                        {isChatting ? <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> : <Rocket className="w-4 h-4" />}
+                                        <span className="text-lg">💾</span> Save Comments
                                     </button>
                                 </div>
                             </div>
+
+                            {/* AI Group Assistant (Chat) using Comments as workaround */}
+                            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[350px]">
+                                <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2 bg-gray-50">
+                                    <Bot className="w-5 h-5 text-green-500" />
+                                    <h3 className="text-sm font-bold text-gray-700">AI Group Assistant</h3>
+                                </div>
+
+                                <div className="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-6">
+                                    {chatHistory.map((msg, idx) => (
+                                        <div key={idx} className={cn("flex gap-4", msg.role === 'user' && "flex-row-reverse")}>
+                                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", msg.role === 'assistant' ? "bg-orange-100" : "bg-blue-100")}>
+                                                {msg.role === 'assistant' ? <Bot className="w-5 h-5 text-orange-500" /> : <User className="w-5 h-5 text-blue-600" />}
+                                            </div>
+                                            <div className={cn("space-y-1", msg.role === 'user' && "text-right")}>
+                                                <p className="text-xs font-bold text-gray-400">{msg.role === 'assistant' ? 'Assistant' : 'You'}</p>
+                                                <div className={cn("p-4 rounded-2xl text-sm leading-relaxed shadow-sm block", msg.role === 'assistant' ? "bg-gray-50 text-gray-700 rounded-tl-none" : "bg-blue-600 text-white rounded-tr-none text-left")}>
+                                                    {msg.content}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={chatInput}
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
+                                            placeholder="Ask the AI Assistant..."
+                                            disabled={isChatting}
+                                            className="w-full pl-4 pr-14 py-3 rounded-xl border-none shadow-sm bg-gray-100 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400 disabled:opacity-50"
+                                        />
+                                        <button
+                                            onClick={handleChatSubmit}
+                                            disabled={!chatInput.trim() || isChatting}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white rounded-lg shadow-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50 transition-all"
+                                        >
+                                            {isChatting ? <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> : <Rocket className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                     </div>
 
                     {/* Sample Logs Section */}

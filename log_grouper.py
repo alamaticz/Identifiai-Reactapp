@@ -247,6 +247,51 @@ def extract_csp_signature(message):
     
     return f"CSP Violation | Blocked: {blocked} | Violated: {violated} | Effective: {effective}"
 
+def extract_rules_from_sequence_summary(sequence_summary_str):
+    """
+    Extract Pega class names from the sequence_summary field.
+    The sequence_summary format is:
+    "1:TypeOfRule->RuleGenerated->FunctionInvoked->ClassGenerated->PegaRuleClass | 2:..."
+    
+    We extract the PegaRuleClass (last part after final ->) from each sequence item.
+    """
+    if not sequence_summary_str or not isinstance(sequence_summary_str, str):
+        return []
+    
+    class_names = []
+    
+    # Split by " | " to get individual sequence items
+    sequence_items = sequence_summary_str.split(" | ")
+    
+    for item in sequence_items:
+        # Each item format: "1:TypeOfRule->RuleGenerated->FunctionInvoked->ClassGenerated->PegaRuleClass"
+        # Split by ":" to remove sequence order number
+        if ":" not in item:
+            continue
+            
+        content = item.split(":", 1)[1]  # Get everything after the first ":"
+        
+        # Split by "->" to get parts
+        parts = content.split("->")
+        
+        # The last part is the PegaRuleClass
+        if len(parts) >= 5:
+            pega_rule_class = parts[-1].strip()
+            
+            # Filter out "NA" values
+            if pega_rule_class and pega_rule_class != "NA":
+                class_names.append(pega_rule_class)
+    
+    # Deduplicate while preserving order
+    seen = set()
+    unique_rules = []
+    for class_name in class_names:
+        if class_name not in seen:
+            seen.add(class_name)
+            unique_rules.append({"class": class_name})
+    
+    return unique_rules
+
 def wait_for_connection(client, max_retries=10, delay=5):
     """Wait for OpenSearch to be available."""
     print(f"[INFO] Connecting to OpenSearch at {OPENSEARCH_URL}...")
@@ -661,7 +706,7 @@ def process_logs(limit=None, batch_size=5000, ignore_checkpoint=False, session_i
         
         # Extract rules if RuleSequence and not yet extracted
         if group_type == "RuleSequence" and not entry["rules"]:
-             extracted = extract_rules_list(group_signature_string)
+             extracted = extract_rules_from_sequence_summary(sequence_summary_raw)
              if extracted:
                  entry["rules"] = extracted
                  entry["rule_count"] = len(extracted)

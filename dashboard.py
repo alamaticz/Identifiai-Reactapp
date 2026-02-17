@@ -336,7 +336,8 @@ def fetch_detailed_table_data(client, size=5000):
                 "exception_summary": display_exception,
                 "message_summary": display_message,
                 "logger_name": rep.get('logger_name'),
-                "diagnosis.report": src.get('diagnosis', {}).get('report')
+                "diagnosis.report": src.get('diagnosis', {}).get('report'),
+                "rules": src.get('rules', [])
             })
         df = pd.DataFrame(data)
         if not df.empty and 'last_seen' in df.columns:
@@ -421,13 +422,37 @@ def show_inspection_dialog(group_id, row_data, client):
     Dialog to show detailed inspection of a group with Diagnosis capabilities.
     """
     import asyncio
-    from Analysis_Diagnosis import diagnose_single_group, construct_analysis_context
+    from Analysis_Diagnosis import diagnose_single_group, construct_analysis_context, DEFAULT_PROMPT_TEMPLATE
+
+    # Clear Pega API response only if we're viewing a different group
+    # Track which group the current response belongs to
+    if 'pega_api_response_group_id' not in st.session_state:
+        st.session_state['pega_api_response_group_id'] = None
+    
+    if st.session_state['pega_api_response_group_id'] != group_id:
+        # Different group - clear the old response
+        if 'pega_api_response' in st.session_state:
+            del st.session_state['pega_api_response']
+        st.session_state['pega_api_response_group_id'] = group_id
 
     c1, c2 = st.columns([2, 1])
     with c1:
         st.markdown(f"**Rule/Message**: `{row_data.get('display_rule', 'N/A')}`")
         st.markdown(f"**Group Type**: {row_data.get('group_type', 'N/A')}")
         st.markdown(f"**Signature**: `{row_data.get('group_signature', 'N/A')}`")
+        
+        # Show Rules if available
+        rules = row_data.get('rules', [])
+        if rules and isinstance(rules, list) and len(rules) > 0:
+            with st.expander("📜 Rule Sequence", expanded=False):
+                 # Create DataFrame and display only the 'class' column
+                 rules_df = pd.DataFrame(rules)
+                 if 'class' in rules_df.columns:
+                     st.dataframe(rules_df[['class']], hide_index=True, use_container_width=True)
+                 else:
+                     # Fallback if class column doesn't exist
+                     st.dataframe(rules_df, hide_index=True, use_container_width=True)
+
     with c2:
         st.metric("Total Count", row_data.get('count', 0))
         
@@ -450,6 +475,97 @@ def show_inspection_dialog(group_id, row_data, client):
 
     st.divider()
 
+    # --- Pega API Integration Section ---
+    st.markdown("### 🔗 Pega API Integration")
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.info("Send this group data to Pega API for processing")
+    with col2:
+        if st.button("📤 Send to Pega API", key="send_to_pega_btn", use_container_width=True):
+            # Prepare the request payload
+            payload = {
+                "request_Post": [
+                    {
+                        "group_signature": row_data.get("group_signature", ""),
+                        "group_type": row_data.get("group_type", ""),
+                        "representative_log": row_data.get("representative_log", {}),
+                        "rules": row_data.get("rules", [])
+                    }
+                ]
+            }
+            
+            # Pega API URL
+            pega_api_url = os.getenv("PEGA_API_URL", "https://pdsllc-dt1.pegacloud.io/prweb/api/LogAnalyzerAPI/v1/ApplicationLogAnalyzer")
+            
+            try:
+                import requests
+                
+                with st.spinner("Sending to Pega API..."):
+                    response = requests.post(
+                        pega_api_url,
+                        json=payload,
+                        headers={"Content-Type": "application/json"},
+                        timeout=30
+                    )
+                    
+                    # Store response in session state for display outside columns
+                    if response.status_code == 200:
+                        st.session_state['pega_api_response'] = {
+                            'status': 'success',
+                            'data': response.json()
+                        }
+                    else:
+                        st.session_state['pega_api_response'] = {
+                            'status': 'error',
+                            'code': response.status_code,
+                            'text': response.text
+                        }
+                        
+            except requests.exceptions.RequestException as e:
+                st.session_state['pega_api_response'] = {
+                    'status': 'connection_error',
+                    'message': str(e)
+                }
+            except Exception as e:
+                st.session_state['pega_api_response'] = {
+                    'status': 'exception',
+                    'message': str(e)
+                }
+    
+    # Display response in the center (outside columns)
+    if 'pega_api_response' in st.session_state:
+        response_data = st.session_state['pega_api_response']
+        
+        if response_data['status'] == 'success':
+            st.success("✅ Successfully sent to Pega API!")
+            with st.expander("📄 View Response", expanded=True):
+                st.json(response_data['data'])
+        elif response_data['status'] == 'error':
+            st.error(f"❌ Failed to send to Pega API. Status: {response_data['code']}")
+            st.code(response_data['text'])
+        elif response_data['status'] == 'connection_error':
+            st.warning(f"⚠️ Could not connect to Pega API: {response_data['message']}")
+            st.info("💡 Tip: Set PEGA_API_URL in your .env file")
+        elif response_data['status'] == 'exception':
+            st.error(f"Error: {response_data['message']}")
+    
+    # Show payload preview
+    with st.expander("📋 View Payload to be Sent", expanded=False):
+        preview_payload = {
+            "request_Post": [
+                {
+                    "group_signature": row_data.get("group_signature", ""),
+                    "group_type": row_data.get("group_type", ""),
+                    "representative_log": row_data.get("representative_log", {}),
+                    "rules": row_data.get("rules", [])
+                }
+            ]
+        }
+        st.json(preview_payload)
+
+    st.divider()
+
     # --- Diagnosis Section ---
     st.markdown("### 🧠 AI Diagnosis")
     
@@ -465,69 +581,40 @@ def show_inspection_dialog(group_id, row_data, client):
              # Fast fetch of single doc source for accurate context Preview
              fresh_doc = client.get(index="pega-analysis-results", id=group_id)
              if fresh_doc and '_source' in fresh_doc:
-                 context_preview = construct_analysis_context(fresh_doc['_source'])
-                 st.json(context_preview)
+                 # Include Pega API response in preview if available
+                 pega_response = None
+                 if 'pega_api_response' in st.session_state:
+                     resp_data = st.session_state['pega_api_response']
+                     if resp_data.get('status') == 'success':
+                         pega_response = resp_data.get('data')
+                 
+                 context_preview = construct_analysis_context(fresh_doc['_source'], pega_response)
+                 
+                 # Separate display for rules and pega_api_insights if present
+                 rules_data = None
+                 pega_insights = None
+                 
+                 if 'rules' in context_preview:
+                     rules_data = context_preview.pop('rules')
+                 if 'pega_api_insights' in context_preview:
+                     pega_insights = context_preview.pop('pega_api_insights')
+                 
+                 st.json(context_preview) # Show everything else
+                 
+                 if rules_data:
+                     st.markdown("**Rules Data (Sent to AI):**")
+                     st.json(rules_data)
+                 
+                 if pega_insights:
+                     st.markdown("**Pega API Insights (Sent to AI):**")
+                     st.json(pega_insights)
              else:
                  st.warning("Could not fetch fresh context.")
         except Exception as e:
             st.warning(f"Could not load context: {e}")
 
     # Defaults
-    default_prompt = """You are a Senior Pega Lead System Architect (LSA). I will provide one or more error-group datasets (logs, aggregated error groups from Pega SmartBPM/PRPC, alert events, stack traces, rule/activity/flow names, node/environment, timestamps, counts, correlation IDs, related metrics).
-
-            Data Provided:
-            {context_str}
-
-            Analyze the input and produce a technical incident report in CLEAN PLAIN TEXT only (no markdown, no HTML, no extra formatting). The report must contain exactly and only the following sections, in this order, as top-level headings (uppercase): EXECUTIVE SUMMARY, SEVERITY, ERROR FLOW, ROOT CAUSE, IMPACT, RESOLUTION.
-            
-            Think step by step. For each section, include the items requested below. Keep wording concise, factual, and actionable. Do not add extra sections or explanatory preamble. If data is missing, call it out under the appropriate section as an information gap and state what is needed to conclude.
-            
-            Required content for each section:
-            
-            1. EXECUTIVE SUMMARY
-            
-            - One-paragraph (2–4 sentences) high-level summary of what the error group is, scope (number of affected cases/transactions/sessions), time window, and immediate operational status (ongoing, mitigated, resolved, intermittent).
-            - One-line recommended next immediate action (example: "apply mitigation X", "rollback changes", "scale nodes", "open CR").
-            
-            2. SEVERITY
-            
-            - A short classification: Critical / High / Medium / Low and a justification (one sentence) referencing impact drivers (customer-facing downtime, SLA breach, data loss, number of users/cases).
-            - Quantitative indicators: total occurrences, percentage of total errors (if known), peak error rate (errors/min or errors/hour), number of unique flows/rulesets/nodes impacted, and time range of observations.
-            - Confidence level for severity assignment (High/Medium/Low) and why.
-            
-            3. ERROR FLOW
-            
-            - A concise narrative of the observed error path: originating entry point (REST/API/Queue/Agent/UI), Pega flow/case type and flow shape where error appears, activities/services/rules involved, downstream systems called (HTTP, DB, JMS) and where failure manifests.
-            - Timeline or sequence of notable events (timestamped or relative): first occurrence, peak, latest occurrence, any correlated deploys/config changes/maintenance windows.
-            - Top 3 most frequent error messages or exception types and representative sample (error code/message, count).
-            - Correlation identifiers or example log lines (one or two) that tie transactions to the error group (include correlation ID, case ID, node if available).
-            
-            4. ROOT CAUSE
-            
-            - Clear statement of the most likely root cause with evidence: configuration change, code/regression, data issue, external dependency, resource exhaustion, concurrency/deadlock, misrouted flow, rule resolution error, etc.
-            - Contributing factors and why they increase likelihood (race condition, missing guardrails, high load, old ruleset version).
-            - Reproducibility: steps to reproduce (if known and deterministic) or conditions required to reproduce.
-            - If uncertain, list alternate hypotheses with brief rationale and what data would confirm each.
-            
-            5. IMPACT
-            
-            - Precise operational impact: number of customers/cases affected, SLA violations and count, business functions impacted, data integrity risk (yes/no), security risk (yes/no).
-            - Short-term operational risk if left unaddressed (worsening error rate, data corruption, system instability).
-            - Estimated exposure/time-to-failure if trend continues (example: error rate doubling in X hours; queue backlog will reach Y in Z hours).
-            
-            6. RESOLUTION
-            
-            - Immediate mitigations (short-term fixes) to stop or reduce impact, with step-by-step actions and safe rollback notes. Include command/config change examples or Pega admin actions where applicable (e.g., patch activity, change rule resolution to previous ruleset, disable agent, increase thread pool, scale-out service).
-            - Recommended permanent fix(es) with implementation approach, required code/config changes, owner role (e.g., LSA, SRE, Integration team), estimated effort (S, M, L — hours/days), and priority.
-            - Verification steps and monitoring: how to validate resolution (tests, queries, sample transactions), success criteria, and metrics to monitor post-fix (error rate, queue depth, CPU).
-            - Post-mortem artefacts to produce (root cause ticket, RCA doc, regression test cases) and suggested timeline for completion.
-            
-            Formatting and tone rules
-            
-            - Use plain text only. Headings must be the exact uppercase words specified followed by a blank line and then the content.
-            - Use short paragraphs and bullet-style lists where useful, but keep the content compact and actionable.
-            - Include explicit evidence references (counts, timestamps, log snippets) from the provided data when drawing conclusions.
-            - If data is insufficient for any conclusion, explicitly state what is missing and why it matters."""
+    default_prompt = DEFAULT_PROMPT_TEMPLATE
 
     with st.expander("📝 Edit Diagnosis Prompt", expanded=False):
         user_prompt = st.text_area("Prompt Template", value=default_prompt, height=150, help="Use {context_str} to inject data, otherwise it's appended.")
@@ -538,13 +625,25 @@ def show_inspection_dialog(group_id, row_data, client):
         if st.button("🚀 Analyze & Diagnose", type="primary"):
             with st.spinner("Analyzing... (This uses Live LLM tokens)"):
                 try:
+                    # Get Pega API response from session state if available
+                    pega_response = None
+                    if 'pega_api_response' in st.session_state:
+                        resp_data = st.session_state['pega_api_response']
+                        if resp_data.get('status') == 'success':
+                            pega_response = resp_data.get('data')
+                            st.info(f"✓ Including Pega API insights in analysis context")
+                        else:
+                            st.warning(f"⚠ Pega API response status: {resp_data.get('status')}")
+                    else:
+                        st.info("ℹ No Pega API response available - analyzing without API insights")
+                    
                     # Run async diagnosis in sync streamlit
-                    diagnosis_text, usage = asyncio.run(diagnose_single_group(client, group_id, user_prompt))
+                    diagnosis_text, usage = asyncio.run(diagnose_single_group(client, group_id, user_prompt, pega_response))
                     
                     if diagnosis_text:
                         st.session_state[f"last_report_{group_id}"] = diagnosis_text
                         st.success("Diagnosis Complete!")
-                        # Removed st.rerun() to keep dialog open
+                        st.rerun()  # Rerun to display the updated report
                     else:
                         st.error("Diagnosis returned empty.")
                 except Exception as e:
